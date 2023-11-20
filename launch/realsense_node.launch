@@ -1,0 +1,5 @@
+<launch>
+    <node name="lego_manipulation_realsense" pkg="lego_manipulation" type="lego_manipulation_realsense" output="screen" required="true">
+        <param name="root_pwd" value="$(find lego_manipulation)/"/>
+    </node>
+</launch>

@@ -1,0 +1,6 @@
+#request
+string frame
+---
+
+#response
+geometry_msgs/Pose pose

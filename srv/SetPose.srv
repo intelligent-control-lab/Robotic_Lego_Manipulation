@@ -1,0 +1,7 @@
+#request
+geometry_msgs/Pose pose #Goal Pose of End Effector
+string base_frame #Frame of the Coordinates
+---
+
+#response
+geometry_msgs/Pose pose

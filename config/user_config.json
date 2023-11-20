@@ -1,0 +1,22 @@
+{
+    "DH_fname":"/config/robot_properties/FANUC_DH.txt",
+    "DH_tool_fname":"/config/robot_properties/FANUC_tool_DH.txt",
+    "DH_tool_assemble_fname":"/config/robot_properties/FANUC_tool_assemble_DH.txt",
+    "DH_tool_disassemble_fname":"/config/robot_properties/FANUC_tool_disassemble_DH.txt",
+    "Robot_Base_fname":"/config/robot_properties/FANUC_base.txt",
+    "Env_Setup_fname":"/config/env_setup.json",
+    "Task_Graph_fname":"/config/assembly_tasks/chair.json",
+    "Twist_Deg":14,
+    "Waypoint_Travel_Time":0.5,
+    "Infinite_Tasks":0,
+    "Start_with_Assemble":1,
+    "Use_yk":0,
+    "ST_Controller_Topic":
+    {
+        "State":"/stmotion_controller_bringup/robot_state",
+        "Joint_Goal":"/stmotion_controller_bringup/robot_goal",
+        "Cart_Goal":"/stmotion_controller_bringup/robot_cart_goal",
+        "Controller_Time":"/stmotion_controller_bringup/jpc_travel_time",
+        "Tracking_space":0
+    }
+}
