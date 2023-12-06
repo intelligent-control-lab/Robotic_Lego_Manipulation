@@ -32,44 +32,83 @@ void Lego::setup(const std::string& env_setup_fname, const bool& assemble, const
     print_manipulation_property();
     
     config_file >> config;
-    storage_plate_x_ = config["storage_plate"]["x"].asDouble();
-    storage_plate_y_ = config["storage_plate"]["y"].asDouble();
-    storage_plate_z_ = config["storage_plate"]["z"].asDouble();
-    storage_plate_width_ = config["storage_plate"]["width"].asInt();
-    storage_plate_height_ = config["storage_plate"]["height"].asInt();
-    assemble_plate_x_ = config["assemble_plate"]["x"].asDouble();
-    assemble_plate_y_ = config["assemble_plate"]["y"].asDouble();
-    assemble_plate_z_ = config["assemble_plate"]["z"].asDouble();
-    assemble_plate_width_ = config["assemble_plate"]["width"].asInt();
-    assemble_plate_height_ = config["assemble_plate"]["height"].asInt();
+    // storage_plate_x_ = config["storage_plate"]["x"].asDouble();
+    // storage_plate_y_ = config["storage_plate"]["y"].asDouble();
+    // storage_plate_z_ = config["storage_plate"]["z"].asDouble();
+    // storage_plate_width_ = config["storage_plate"]["width"].asInt();
+    // storage_plate_height_ = config["storage_plate"]["height"].asInt();
+    // assemble_plate_x_ = config["assemble_plate"]["x"].asDouble();
+    // assemble_plate_y_ = config["assemble_plate"]["y"].asDouble();
+    // assemble_plate_z_ = config["assemble_plate"]["z"].asDouble();
+    // assemble_plate_width_ = config["assemble_plate"]["width"].asInt();
+    // assemble_plate_height_ = config["assemble_plate"]["height"].asInt();
 
     for(auto brick = config.begin(); brick != config.end(); brick++)
     {
         brick_pose.model_name = brick.name();
-        
         if(brick.name().compare("storage_plate") == 0)
         {
-            storage_plate_x_ = (*brick)["x"].asDouble();
-            storage_plate_y_ = (*brick)["y"].asDouble();
-            storage_plate_z_ = (*brick)["z"].asDouble();
-            storage_plate_width_ = (*brick)["width"].asInt();
-            storage_plate_height_ = (*brick)["height"].asInt();
-            x = storage_plate_x_;
-            y = storage_plate_y_;
-            z = storage_plate_z_;
+            storage_plate_.x = (*brick)["x"].asDouble();
+            storage_plate_.y = (*brick)["y"].asDouble();
+            storage_plate_.z = (*brick)["z"].asDouble();
+            storage_plate_.roll = (*brick)["roll"].asDouble();
+            storage_plate_.pitch = (*brick)["pitch"].asDouble();
+            storage_plate_.yaw = (*brick)["yaw"].asDouble();
+            Eigen::AngleAxisd rollAngle(storage_plate_.roll, Eigen::Vector3d::UnitX());
+            Eigen::AngleAxisd pitchAngle(storage_plate_.pitch, Eigen::Vector3d::UnitY());
+            Eigen::AngleAxisd yawAngle(storage_plate_.yaw, Eigen::Vector3d::UnitZ());
+            storage_plate_.quat = yawAngle * pitchAngle * rollAngle;
+            storage_plate_.pose = Eigen::Matrix4d::Identity(4, 4);
+            storage_plate_.pose.block(0, 0, 3, 3) = storage_plate_.quat.matrix();
+            storage_plate_.pose.col(3) << storage_plate_.x, storage_plate_.y, storage_plate_.z, 1;
+            storage_plate_.width = (*brick)["width"].asInt();
+            storage_plate_.height = (*brick)["height"].asInt();
+            
+            x = storage_plate_.x;
+            y = storage_plate_.y;
+            z = storage_plate_.z;
+            quat = storage_plate_.quat;
         }
         else if(brick.name().compare("assemble_plate") == 0)
         {
-            assemble_plate_x_ = (*brick)["x"].asDouble();
-            assemble_plate_y_ = (*brick)["y"].asDouble();
-            assemble_plate_z_ = (*brick)["z"].asDouble();
-            assemble_plate_width_ = (*brick)["width"].asInt();
-            assemble_plate_height_ = (*brick)["height"].asInt();
-            x = assemble_plate_x_;
-            y = assemble_plate_y_;
-            z = assemble_plate_z_;
+            assemble_plate_.x = (*brick)["x"].asDouble();
+            assemble_plate_.y = (*brick)["y"].asDouble();
+            assemble_plate_.z = (*brick)["z"].asDouble();
+            assemble_plate_.roll = (*brick)["roll"].asDouble();
+            assemble_plate_.pitch = (*brick)["pitch"].asDouble();
+            assemble_plate_.yaw = (*brick)["yaw"].asDouble();
+            Eigen::AngleAxisd rollAngle(assemble_plate_.roll, Eigen::Vector3d::UnitX());
+            Eigen::AngleAxisd pitchAngle(assemble_plate_.pitch, Eigen::Vector3d::UnitY());
+            Eigen::AngleAxisd yawAngle(assemble_plate_.yaw, Eigen::Vector3d::UnitZ());
+            assemble_plate_.quat = yawAngle * pitchAngle * rollAngle;
+            assemble_plate_.pose = Eigen::Matrix4d::Identity(4, 4);
+            assemble_plate_.pose.block(0, 0, 3, 3) = assemble_plate_.quat.matrix();
+            assemble_plate_.pose.col(3) << assemble_plate_.x, assemble_plate_.y, assemble_plate_.z, 1;
+            assemble_plate_.width = (*brick)["width"].asInt();
+            assemble_plate_.height = (*brick)["height"].asInt();
+            
+            x = assemble_plate_.x;
+            y = assemble_plate_.y;
+            z = assemble_plate_.z;
+            quat = assemble_plate_.quat;
         }
-        else if(brick.name()[0] == 'b')
+        else{
+            continue;
+        }
+        brick_pose.pose.position.x = x;
+        brick_pose.pose.position.y = y;
+        brick_pose.pose.position.z = z;
+        brick_pose.pose.orientation.x = quat.x();
+        brick_pose.pose.orientation.y = quat.y();
+        brick_pose.pose.orientation.z = quat.z();
+        brick_pose.pose.orientation.w = quat.w();
+        setmodelstate_.request.model_state = brick_pose;
+        client_.call(setmodelstate_);
+    }
+    for(auto brick = config.begin(); brick != config.end(); brick++)
+    {
+        brick_pose.model_name = brick.name();
+        if(brick.name()[0] == 'b')
         {
             calc_brick_loc(brick.name(), storage_plate_x_, storage_plate_y_, 0, storage_plate_width_, storage_plate_height_, 
                            (*brick)["x"].asInt(), (*brick)["y"].asInt(), x, y);

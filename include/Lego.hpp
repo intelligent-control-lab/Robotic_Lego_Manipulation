@@ -27,6 +27,19 @@ struct lego_brick{
     std::map<std::string, std::string> bottom_connect;
 };
 
+struct lego_plate{
+    int height;
+    int width;
+    double x;
+    double y;
+    double z;
+    double roll;
+    double pitch;
+    double yaw;
+    Eigen::Quaterniond quat;
+    Eigen::Matrix4d pose;
+};
+
 class Lego
 {
     /* -------------------------------------------------------------------------- */
@@ -56,6 +69,8 @@ class Lego
         double assemble_plate_x_ = 0.0;
         double assemble_plate_y_ = 0.0;
         double assemble_plate_z_ = 0.0;
+        lego_plate assemble_plate_;
+        lego_plate storage_plate_;
         int assemble_plate_width_ = 0;
         int assemble_plate_height_ = 0;
         int robot_dof_ = 6;
