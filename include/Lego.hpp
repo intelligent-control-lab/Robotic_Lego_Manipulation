@@ -85,9 +85,9 @@ class Lego
 
         void update_all_top_bricks(const std::string& brick_name, const Eigen::Matrix4d& dT);
         void update(const std::string& brick_name, const Eigen::Matrix4d& T);
-        void calc_brick_loc(const std::string name, const double& ref_x, const double& ref_y, const int& orientation,
-                            const int& plate_width, const int& plate_height, const int& brick_loc_x, const int& brick_loc_y, 
-                            double& out_x, double& out_y);
+        void calc_brick_loc(const std::string name, const lego_plate& plate, const int& orientation,
+                            const int& brick_loc_x, const int& brick_loc_y, const int& brick_loc_z, 
+                            Eigen::Matrix4d& out_pose);
         bool is_top_connect(const lego_brick& b1, const lego_brick& b2);
         bool is_bottom_connect(const lego_brick& b1, const lego_brick& b2);
         bool bricks_overlap(const lego_brick& b1, const lego_brick& b2);

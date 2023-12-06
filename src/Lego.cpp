@@ -19,10 +19,11 @@ void Lego::setup(const std::string& env_setup_fname, const bool& assemble, const
     Json::Value config;
     double x, y, z;
     Eigen::Quaterniond quat(Eigen::Matrix3d::Identity(3, 3));
-    brick_pose.pose.orientation.x = quat.x();
-    brick_pose.pose.orientation.y = quat.y();
-    brick_pose.pose.orientation.z = quat.z();
-    brick_pose.pose.orientation.w = quat.w();
+    Eigen::Matrix4d brick_pose_mtx;
+    Eigen::Matrix3d z_90;
+    z_90 << 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0;
+    Eigen::Matrix3d rot_mtx = Eigen::Matrix3d::Identity(3, 3);
+    std::string brick_name;
 
     set_robot_base(base_fname);
     set_DH(DH_fname);
@@ -30,18 +31,7 @@ void Lego::setup(const std::string& env_setup_fname, const bool& assemble, const
     set_DH_tool_assemble(DH_tool_assemble_fname);
     set_DH_tool_disassemble(DH_tool_disassemble_fname);
     print_manipulation_property();
-    
     config_file >> config;
-    // storage_plate_x_ = config["storage_plate"]["x"].asDouble();
-    // storage_plate_y_ = config["storage_plate"]["y"].asDouble();
-    // storage_plate_z_ = config["storage_plate"]["z"].asDouble();
-    // storage_plate_width_ = config["storage_plate"]["width"].asInt();
-    // storage_plate_height_ = config["storage_plate"]["height"].asInt();
-    // assemble_plate_x_ = config["assemble_plate"]["x"].asDouble();
-    // assemble_plate_y_ = config["assemble_plate"]["y"].asDouble();
-    // assemble_plate_z_ = config["assemble_plate"]["z"].asDouble();
-    // assemble_plate_width_ = config["assemble_plate"]["width"].asInt();
-    // assemble_plate_height_ = config["assemble_plate"]["height"].asInt();
 
     for(auto brick = config.begin(); brick != config.end(); brick++)
     {
@@ -105,14 +95,18 @@ void Lego::setup(const std::string& env_setup_fname, const bool& assemble, const
         setmodelstate_.request.model_state = brick_pose;
         client_.call(setmodelstate_);
     }
+
     for(auto brick = config.begin(); brick != config.end(); brick++)
     {
         brick_pose.model_name = brick.name();
         if(brick.name()[0] == 'b')
         {
-            calc_brick_loc(brick.name(), storage_plate_x_, storage_plate_y_, 0, storage_plate_width_, storage_plate_height_, 
-                           (*brick)["x"].asInt(), (*brick)["y"].asInt(), x, y);
-            z = storage_plate_z_ + (*brick)["z"].asInt() * brick_height_m_;
+            calc_brick_loc(brick.name(), storage_plate_, 0,
+                           (*brick)["x"].asInt(), (*brick)["y"].asInt(), (*brick)["z"].asInt(),
+                           brick_pose_mtx);
+            x = brick_pose_mtx(0, 3);
+            y = brick_pose_mtx(1, 3);
+            z = brick_pose_mtx(2, 3);
             lego_brick l_brick;
             l_brick.brick_name = brick.name();
             l_brick.height = std::stoi(brick.name().substr(1, 1));
@@ -124,8 +118,8 @@ void Lego::setup(const std::string& env_setup_fname, const bool& assemble, const
             l_brick.cur_y = y;
             l_brick.cur_z = z;
             l_brick.in_stock = true;
-            Eigen::Matrix3d rot_mtx = Eigen::Matrix3d::Identity(3, 3);
-            Eigen::Quaterniond quat(rot_mtx);
+            rot_mtx = brick_pose_mtx.block(0, 0, 3, 3);
+            quat = rot_mtx;
             l_brick.quat_x = quat.x();
             l_brick.quat_y = quat.y();
             l_brick.quat_z = quat.z();
@@ -146,25 +140,23 @@ void Lego::setup(const std::string& env_setup_fname, const bool& assemble, const
     }
     if(!assemble)
     {
-        std::string brick_name;
-        double x, y, brick_z_m;
-        Eigen::Matrix3d z_90;
-        z_90 << 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0;
-        Eigen::Matrix3d rot_mtx = Eigen::Matrix3d::Identity(3, 3);
-        Eigen::Matrix3d rot_mtx1 = rot_mtx * z_90;
-        Eigen::Quaterniond quat;
         for(int i=1; i<=task_json.size(); i++)
         {
             auto cur_graph_node = task_json[std::to_string(i)];
             brick_name = get_brick_name_by_id(cur_graph_node["brick_id"].asInt(), cur_graph_node["brick_seq"].asInt());
-            calc_brick_loc(brick_name, assemble_plate_x_, assemble_plate_y_, cur_graph_node["ori"].asInt(), assemble_plate_width_, assemble_plate_height_, 
-                           cur_graph_node["x"].asInt(), cur_graph_node["y"].asInt(), x, y);
-            brick_z_m = assemble_plate_z_ + cur_graph_node["z"].asInt() * brick_height_m_;
+            calc_brick_loc(brick_name, assemble_plate_, cur_graph_node["ori"].asInt(),
+                           cur_graph_node["x"].asInt(), cur_graph_node["y"].asInt(), cur_graph_node["z"].asInt(),
+                           brick_pose_mtx);
+
+            x = brick_pose_mtx(0, 3);
+            y = brick_pose_mtx(1, 3);
+            z = brick_pose_mtx(2, 3);
+            rot_mtx = brick_pose_mtx.block(0, 0, 3, 3);
 
             brick_map_[brick_name].in_stock = assemble;
             if(cur_graph_node["ori"].asInt() == 1)
             {
-                quat = rot_mtx1;
+                quat = rot_mtx * z_90;
             }
             else
             {
@@ -172,13 +164,13 @@ void Lego::setup(const std::string& env_setup_fname, const bool& assemble, const
             }
             brick_map_[brick_name].cur_x = x;
             brick_map_[brick_name].cur_y = y;
-            brick_map_[brick_name].cur_z = brick_z_m;
+            brick_map_[brick_name].cur_z = z;
             brick_map_[brick_name].cur_quat = quat;
 
             brick_pose.model_name = brick_name;
             brick_pose.pose.position.x = x;
             brick_pose.pose.position.y = y;
-            brick_pose.pose.position.z = brick_z_m;
+            brick_pose.pose.position.z = z;
             brick_pose.pose.orientation.x = quat.x();
             brick_pose.pose.orientation.y = quat.y();
             brick_pose.pose.orientation.z = quat.z();
@@ -259,28 +251,36 @@ void Lego::set_DH_tool_disassemble(const std::string& fname)
 }
 
 
-void Lego::calc_brick_loc(const std::string name, const double& ref_x, const double& ref_y, const int& orientation,
-                                 const int& plate_width, const int& plate_height, const int& brick_loc_x, const int& brick_loc_y, 
-                                 double& out_x, double& out_y)
+void Lego::calc_brick_loc(const std::string name, const lego_plate& plate, const int& orientation,
+                          const int& brick_loc_x, const int& brick_loc_y, const int& brick_loc_z, 
+                          Eigen::Matrix4d& out_pose)
 {
     int brick_height = std::stoi(name.substr(1, 1));
     int brick_width = std::stoi(name.substr(2, 1));
+    int plate_width = plate.width;
+    int plate_height = plate.height;
     double brick_offset_x_m = brick_loc_x * P_len_ - brick_len_offset_;
     double brick_offset_y_m = brick_loc_y * P_len_ - brick_len_offset_;
-
-    double brick_topleft_x_m = std::max(brick_offset_x_m, 0.0) + (ref_x - (plate_width * P_len_ - brick_len_offset_) / 2.0);
-    double brick_topleft_y_m = std::max(brick_offset_y_m, 0.0) + (ref_y - (plate_height * P_len_ - brick_len_offset_) / 2.0);
-
+    double brick_offset_z_m = brick_loc_z * brick_height_m_;
     if(orientation == 0)
     {
-        out_x = brick_topleft_x_m + (brick_height * P_len_ - brick_len_offset_) / 2.0;
-        out_y = brick_topleft_y_m + (brick_width * P_len_ - brick_len_offset_) / 2.0;
+        brick_offset_x_m = brick_offset_x_m + (brick_height * P_len_ - brick_len_offset_) / 2.0;
+        brick_offset_y_m = brick_offset_y_m + (brick_width * P_len_ - brick_len_offset_) / 2.0;
     }
     else
     {
-        out_x = brick_topleft_x_m + (brick_width * P_len_ - brick_len_offset_) / 2.0;
-        out_y = brick_topleft_y_m + (brick_height * P_len_ - brick_len_offset_) / 2.0;
+        brick_offset_x_m = brick_offset_x_m + (brick_width * P_len_ - brick_len_offset_) / 2.0;
+        brick_offset_y_m = brick_offset_y_m + (brick_height * P_len_ - brick_len_offset_) / 2.0;
     }
+    Eigen::Matrix4d brick_offset = Eigen::Matrix4d::Identity(4, 4);
+    Eigen::Matrix4d refpose = plate.pose;
+    Eigen::Matrix4d topleft_offset = Eigen::Matrix4d::Identity(4, 4);
+    brick_offset.col(3) << brick_offset_x_m, brick_offset_y_m, brick_offset_z_m, 1;
+    topleft_offset.col(3) << -(plate_width * P_len_ - brick_len_offset_) / 2.0,
+                             -(plate_height * P_len_ - brick_len_offset_) / 2.0,
+                             0,
+                             1;
+    out_pose = refpose * topleft_offset * brick_offset;
 }
 
 
@@ -290,27 +290,34 @@ void Lego::calc_brick_grab_pose(const std::string& name, const bool& assemble_po
                                        const int& orientation, const int& press_side, Eigen::MatrixXd& T)
 {
     lego_brick l_brick = brick_map_[name];
-    int brick_height = l_brick.height;//::stoi(name.substr(1, 1));
-    int brick_width = l_brick.width;//::stoi(name.substr(2, 1));
+    int brick_height = l_brick.height;
+    int brick_width = l_brick.width;
     brick_map_[name].press_side = press_side;
     
     Eigen::Quaterniond quat;
     double x, y, z;
-    Eigen::Matrix3d y_180, z_180, z_90;
-    y_180 << -1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -1.0;
-    z_180 << -1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0;
-    z_90 << 0, -1, 0, 1, 0, 0, 0, 0, 1;
+    Eigen::Matrix4d y_180, z_180, z_90;
+    y_180 << -1, 0, 0, 0, 
+             0, 1, 0, 0, 
+             0, 0, -1, 0,
+             0, 0, 0, 1;
+    z_180 << -1, 0, 0, 0,
+             0, -1, 0, 0,
+             0, 0, 1, 0,
+             0, 0, 0, 1;
+    z_90 << 0, -1, 0, 0, 
+            1, 0, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1;
+
     Eigen::Matrix3d rot_mtx = Eigen::Matrix3d::Identity(3, 3);
+    Eigen::Matrix4d brick_pose_mtx = Eigen::Matrix4d::Identity(4, 4);
+    Eigen::Matrix4d grab_offset_mtx = Eigen::Matrix4d::Identity(4, 4);
+    Eigen::Matrix4d grab_pose_mtx = Eigen::Matrix4d::Identity(4, 4);
 
     // Get pose to grab the brick
     if(take_brick)
     {
-        quat.x() = l_brick.cur_quat.x();
-        quat.y() = l_brick.cur_quat.y();
-        quat.z() = l_brick.cur_quat.z();
-        quat.w() = l_brick.cur_quat.w();
-        rot_mtx = rot_mtx * y_180;
-        
         // Brick on storage plate
         if(l_brick.in_stock)
         {
@@ -319,155 +326,170 @@ void Lego::calc_brick_grab_pose(const std::string& name, const bool& assemble_po
             quat.z() = l_brick.quat_z;
             quat.w() = l_brick.quat_w;
             rot_mtx = quat.normalized().toRotationMatrix();
+            brick_pose_mtx.block(0, 0, 3, 3) << rot_mtx;
+            brick_pose_mtx(0, 3) = l_brick.x;
+            brick_pose_mtx(1, 3) = l_brick.y;
+            brick_pose_mtx(2, 3) = l_brick.z;
+
             if(press_side == 1 || press_side == 4)
             {
-                x = l_brick.x - (brick_height * P_len_ - brick_len_offset_) / 2.0;
+                grab_offset_mtx(0, 3) = - (brick_height * P_len_ - brick_len_offset_) / 2.0;
                 if(brick_width % 2 == 0)
                 {
-                    y = l_brick.y;
+                    grab_offset_mtx(1, 3) = 0;
                 }
                 else
                 {
-                    y = l_brick.y + (P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx(1, 3) = (P_len_ - brick_len_offset_) / 2.0;
                 }  
-                z = l_brick.z;
-                rot_mtx = rot_mtx * y_180 * z_180;
+                grab_pose_mtx = brick_pose_mtx * y_180 * z_180 * grab_offset_mtx;
             }
             else
             {
                 if(brick_height % 2 == 0)
                 {
-                    x = l_brick.x;
+                    grab_offset_mtx(0, 3) = 0;
                 }
                 else
                 {
-                    x = l_brick.x + (P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx(0, 3) = (P_len_ - brick_len_offset_) / 2.0;
                 }
-                y = l_brick.y + (brick_width * P_len_ - brick_len_offset_) / 2.0;
-                z = l_brick.z;
-                rot_mtx = rot_mtx * y_180 * z_180 * z_90;
+                grab_offset_mtx(1, 3) = (brick_width * P_len_ - brick_len_offset_) / 2.0;
+                grab_pose_mtx = brick_pose_mtx * y_180 * z_180 * z_90 * grab_offset_mtx;
             }
         }  
         // Landscape orientation
         else if((math::ApproxEqNum(quat.x(), 0, EPS_) && math::ApproxEqNum(quat.y(), 0, EPS_) && math::ApproxEqNum(quat.z(), 0, EPS_)) ||
                 (math::ApproxEqNum(quat.x(), 0, EPS_) && math::ApproxEqNum(quat.y(), 0, EPS_) && math::ApproxEqNum(quat.z(), 1, EPS_)))
         {
-            
+            quat.x() = l_brick.cur_quat.x();
+            quat.y() = l_brick.cur_quat.y();
+            quat.z() = l_brick.cur_quat.z();
+            quat.w() = l_brick.cur_quat.w();
+            rot_mtx = quat.normalized().toRotationMatrix();
+            brick_pose_mtx.block(0, 0, 3, 3) << rot_mtx;
+            brick_pose_mtx(0, 3) = l_brick.cur_x;
+            brick_pose_mtx(1, 3) = l_brick.cur_y;
+            brick_pose_mtx(2, 3) = l_brick.cur_z;
+            brick_pose_mtx = brick_pose_mtx * y_180;
             if(press_side == 1)
             {
-                rot_mtx = rot_mtx * z_180;
-                x = l_brick.cur_x - (brick_height * P_len_ - brick_len_offset_) / 2.0;
+                grab_offset_mtx = grab_offset_mtx * z_180;
+                grab_offset_mtx(0, 3) = -(brick_height * P_len_ - brick_len_offset_) / 2.0;
                 if(brick_width % 2 == 0)
                 {
-                    y = l_brick.cur_y;
+                    grab_offset_mtx(1, 3) = 0;
                 }
                 else
                 {
-                    y = l_brick.cur_y + (P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx(1, 3) = (P_len_ - brick_len_offset_) / 2.0;
                 }  
-                z = l_brick.cur_z;
             }
             else if(press_side == 2)
             {
-                rot_mtx = rot_mtx * z_180 * z_90;
+                grab_offset_mtx = grab_offset_mtx * z_180 * z_90;
                 if(brick_height % 2 == 0)
                 {
-                    x = l_brick.cur_x;
+                    grab_offset_mtx(0, 3) = 0;
                 }
                 else
                 {
-                    x = l_brick.cur_x + (P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx(0, 3) = (P_len_ - brick_len_offset_) / 2.0;
                 }
-                y = l_brick.cur_y + (brick_width * P_len_ - brick_len_offset_) / 2.0;
-                z = l_brick.cur_z;
+                grab_offset_mtx(1, 3) = (brick_width * P_len_ - brick_len_offset_) / 2.0;
             }
             else if(press_side == 3)
             {
                 if(brick_height % 2 == 0)
                 {
-                    x = l_brick.cur_x;
+                    grab_offset_mtx(0, 3) = 0;
                 }
                 else
                 {
-                    x = l_brick.cur_x - (P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx(0, 3) = -(P_len_ - brick_len_offset_) / 2.0;
                 }
-                y = l_brick.cur_y - (brick_width * P_len_ - brick_len_offset_) / 2.0;
-                z = l_brick.cur_z;
-                rot_mtx = rot_mtx * z_90;
+                grab_offset_mtx(1, 3) = -(brick_width * P_len_ - brick_len_offset_) / 2.0;
+                grab_offset_mtx = grab_offset_mtx * z_90;
             }
             else
             {
-                rot_mtx = rot_mtx;
-                x = l_brick.cur_x + (brick_height * P_len_ - brick_len_offset_) / 2.0;
+                grab_offset_mtx(0, 3) = (brick_height * P_len_ - brick_len_offset_) / 2.0;
                 if(brick_width % 2 == 0)
                 {
-                    y = l_brick.cur_y;
+                    grab_offset_mtx(1, 3) = 0;
                 }
                 else
                 {
-                    y = l_brick.cur_y - (P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx(1, 3) = -(P_len_ - brick_len_offset_) / 2.0;
                 }  
-                z = l_brick.cur_z;
             }
+            grab_pose_mtx = brick_pose_mtx * grab_offset_mtx;
         }
         // Vertical orientation
         else
         {
+            quat.x() = l_brick.cur_quat.x();
+            quat.y() = l_brick.cur_quat.y();
+            quat.z() = l_brick.cur_quat.z();
+            quat.w() = l_brick.cur_quat.w();
+            rot_mtx = quat.normalized().toRotationMatrix();
+            brick_pose_mtx.block(0, 0, 3, 3) << rot_mtx;
+            brick_pose_mtx(0, 3) = l_brick.cur_x;
+            brick_pose_mtx(1, 3) = l_brick.cur_y;
+            brick_pose_mtx(2, 3) = l_brick.cur_z;
+            brick_pose_mtx = brick_pose_mtx * y_180;
             if(press_side == 1)
             {   
                 if(brick_width % 2 == 0)
                 {
-                    x = l_brick.cur_x;
+                    grab_offset_mtx(0, 3) = 0;
                 }
                 else
                 {
-                    x = l_brick.cur_x - (P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx(0, 3) = -(P_len_ - brick_len_offset_) / 2.0;
                 }
-                y = l_brick.cur_y - (brick_height * P_len_ - brick_len_offset_) / 2.0;
-                z = l_brick.cur_z;
-                rot_mtx = rot_mtx * z_90;
+                grab_offset_mtx(1, 3) = -(brick_height * P_len_ - brick_len_offset_) / 2.0;
+                grab_offset_mtx = grab_offset_mtx * z_90;
             }
             if(press_side == 2)
             {   
-                x = l_brick.cur_x - (brick_width * P_len_ - brick_len_offset_) / 2.0;
+                grab_offset_mtx(0, 3) = -(brick_width * P_len_ - brick_len_offset_) / 2.0;
                 if(brick_height % 2 == 0)
                 {
-                    y = l_brick.cur_y;
+                    grab_offset_mtx(1, 3) = 0;
                 }
                 else
                 {
-                    y = l_brick.cur_y + (P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx(1, 3) = (P_len_ - brick_len_offset_) / 2.0;
                 }  
-                z = l_brick.cur_z;
-                rot_mtx = rot_mtx * z_180;
+                grab_offset_mtx = grab_offset_mtx * z_180;
             }
             if(press_side == 3)
             {   
-                x = l_brick.cur_x + (brick_width * P_len_ - brick_len_offset_) / 2.0;
+               grab_offset_mtx(0, 3) = (brick_width * P_len_ - brick_len_offset_) / 2.0;
                 if(brick_height % 2 == 0)
                 {
-                    y = l_brick.cur_y;
+                    grab_offset_mtx(1, 3) = 0;
                 }
                 else
                 {
-                    y = l_brick.cur_y - (P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx(1, 3) = -(P_len_ - brick_len_offset_) / 2.0;
                 }  
-                z = l_brick.cur_z;
             }
             if(press_side == 4)
             {   
                 if(brick_width % 2 == 0)
                 {
-                    x = l_brick.cur_x;
+                    grab_offset_mtx(0, 3) = 0;
                 }
                 else
                 {
-                    x = l_brick.cur_x + (P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx(0, 3) = (P_len_ - brick_len_offset_) / 2.0;
                 }
-                y = l_brick.cur_y + (brick_height * P_len_ - brick_len_offset_) / 2.0;
-                z = l_brick.cur_z;
-                rot_mtx = rot_mtx * z_180 * z_90;
+                grab_offset_mtx(1, 3) = (brick_height * P_len_ - brick_len_offset_) / 2.0;
+                grab_offset_mtx = grab_offset_mtx * z_180 * z_90;
             } 
+            grab_pose_mtx = brick_pose_mtx * grab_offset_mtx;
         }
     }
     // Get pose to place the brick
@@ -481,95 +503,101 @@ void Lego::calc_brick_grab_pose(const std::string& name, const bool& assemble_po
             quat.z() = l_brick.quat_z;
             quat.w() = l_brick.quat_w;
             rot_mtx = quat.normalized().toRotationMatrix();
+            brick_pose_mtx.block(0, 0, 3, 3) << rot_mtx;
+            brick_pose_mtx(0, 3) = l_brick.x;
+            brick_pose_mtx(1, 3) = l_brick.y;
+            brick_pose_mtx(2, 3) = l_brick.z;
+            brick_pose_mtx = brick_pose_mtx * y_180;
             if(press_side == 1 || press_side == 4)
             {
-                x = l_brick.x - (brick_height * P_len_ - brick_len_offset_) / 2.0;
+                grab_offset_mtx(0, 3) = (brick_height * P_len_ - brick_len_offset_) / 2.0;
                 if(brick_width % 2 == 0)
                 {
-                    y = l_brick.y;
+                    grab_offset_mtx(1, 3) = 0;
                 }
                 else
                 {
-                    y = l_brick.y + (P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx(1, 3) = (P_len_ - brick_len_offset_) / 2.0;
                 }  
-                z = l_brick.z;
-                rot_mtx = rot_mtx * y_180 * z_180;
+                grab_offset_mtx = grab_offset_mtx * z_180;
             }
             else
             {
                 if(brick_height % 2 == 0)
                 {
-                    x = l_brick.x;
+                    grab_offset_mtx(0, 3) = 0;
                 }
                 else
                 {
-                    x = l_brick.x + (P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx(0, 3) = (P_len_ - brick_len_offset_) / 2.0;
                 }
-                y = l_brick.y + (brick_width * P_len_ - brick_len_offset_) / 2.0;
-                z = l_brick.z;
-                rot_mtx = rot_mtx * y_180 * z_180 * z_90;
+                grab_offset_mtx(1, 3) = (brick_width * P_len_ - brick_len_offset_) / 2.0;
+                grab_offset_mtx = grab_offset_mtx * z_180 * z_90;
             }
+            grab_pose_mtx = brick_pose_mtx * grab_offset_mtx;
         }  
         // Place on assemble plate
         else
         {
-            calc_brick_loc(name, assemble_plate_x_, assemble_plate_y_, orientation, assemble_plate_width_, assemble_plate_height_, 
-                           brick_assemble_x, brick_assemble_y, x, y);
-            z = assemble_plate_z_ + brick_assemble_z * brick_height_m_;
-            rot_mtx = rot_mtx * y_180;
+            Eigen::Matrix4d brick_pose_mtx;
+            calc_brick_loc(name, assemble_plate_, orientation, 
+                           brick_assemble_x, brick_assemble_y, brick_assemble_z, brick_pose_mtx);
+
+            brick_pose_mtx = brick_pose_mtx * y_180;
             if(orientation == 0)
             {
                 if(press_side == 1)
                 {
-                    x = x - (brick_height * P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx(0, 3) = -(brick_height * P_len_ - brick_len_offset_) / 2.0;
                     if(brick_width % 2 == 0)
                     {
-                        y = y;
+                        grab_offset_mtx(1, 3) = 0;
                     }
                     else
                     {
-                        y = y + (P_len_ - brick_len_offset_) / 2.0;
+                        grab_offset_mtx(1, 3) = (P_len_ - brick_len_offset_) / 2.0;
                     }  
-                    rot_mtx = rot_mtx * z_180;
+                    grab_offset_mtx = grab_offset_mtx * z_180;
                 }
                 else if(press_side == 2)
                 {
                     if(brick_height % 2 == 0)
                     {
-                        x = x;
+                        grab_offset_mtx(0, 3) = 0;
                     }
                     else
                     {
-                        x = x + (P_len_ - brick_len_offset_) / 2.0;
+                        grab_offset_mtx(0, 3) = (P_len_ - brick_len_offset_) / 2.0;
                     }
-                    y = y + (brick_width * P_len_ - brick_len_offset_) / 2.0;
-                    rot_mtx = rot_mtx * z_180 * z_90;
+                    grab_offset_mtx(1, 3) = (brick_width * P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx = grab_offset_mtx * z_180 * z_90;
                 }
                 else if(press_side == 3)
                 {
                     if(brick_height % 2 == 0)
                     {
-                        x = x;
+                        grab_offset_mtx(0, 3) = 0;
                     }
                     else
                     {
-                        x = x - (P_len_ - brick_len_offset_) / 2.0;
+                        grab_offset_mtx(0, 3) = -(P_len_ - brick_len_offset_) / 2.0;
                     }
-                    y = y - (brick_width * P_len_ - brick_len_offset_) / 2.0;
-                    rot_mtx = rot_mtx * z_90;
+                    grab_offset_mtx(1, 3) = -(brick_width * P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx = grab_offset_mtx * z_90;
                 }
                 else
                 {
-                    x = x + (brick_height * P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx(0, 3) = (brick_height * P_len_ - brick_len_offset_) / 2.0;
                     if(brick_width % 2 == 0)
                     {
-                        y = y;
+                        grab_offset_mtx(1, 3) = 0;
                     }
                     else
                     {
-                        y = y - (P_len_ - brick_len_offset_) / 2.0;
+                        grab_offset_mtx(1, 3) = -(P_len_ - brick_len_offset_) / 2.0;
                     }  
                 }
+                grab_pose_mtx = brick_pose_mtx * grab_offset_mtx;
             }
             else
             {
@@ -577,53 +605,54 @@ void Lego::calc_brick_grab_pose(const std::string& name, const bool& assemble_po
                 {   
                     if(brick_width % 2 == 0)
                     {
-                        x = x;
+                        grab_offset_mtx(0, 3) = 0;
                     }
                     else
                     {
-                        x = x - (P_len_ - brick_len_offset_) / 2.0;
+                        grab_offset_mtx(0, 3) = -(P_len_ - brick_len_offset_) / 2.0;
                     }
-                    y = y - (brick_height * P_len_ - brick_len_offset_) / 2.0;
-                    rot_mtx = rot_mtx * z_90;
+                    grab_offset_mtx(1, 3) = -(brick_height * P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx = grab_offset_mtx * z_90;
                 }
                 if(press_side == 2)
                 {   
-                    x = x - (brick_width * P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx(0, 3) = -(brick_width * P_len_ - brick_len_offset_) / 2.0;
                     if(brick_height % 2 == 0)
                     {
-                        y = y;
+                        grab_offset_mtx(1, 3) = 0;
                     }
                     else
                     {
-                        y = y + (P_len_ - brick_len_offset_) / 2.0;
+                        grab_offset_mtx(1, 3) = (P_len_ - brick_len_offset_) / 2.0;
                     }  
-                    rot_mtx = rot_mtx * z_180;
+                    grab_offset_mtx = grab_offset_mtx * z_180;
                 }
                 if(press_side == 3)
                 {   
-                    x = x + (brick_width * P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx(0, 3) = (brick_width * P_len_ - brick_len_offset_) / 2.0;
                     if(brick_height % 2 == 0)
                     {
-                        y = y;
+                        grab_offset_mtx(1, 3) = 0;
                     }
                     else
                     {
-                        y = y - (P_len_ - brick_len_offset_) / 2.0;
+                        grab_offset_mtx(1, 3) = -(P_len_ - brick_len_offset_) / 2.0;
                     }  
                 }
                 if(press_side == 4)
                 {   
                     if(brick_width % 2 == 0)
                     {
-                        x = x;
+                        grab_offset_mtx(0, 3) = 0;
                     }
                     else
                     {
-                        x = x + (P_len_ - brick_len_offset_) / 2.0;
+                        grab_offset_mtx(0, 3) = (P_len_ - brick_len_offset_) / 2.0;
                     }
-                    y = y + (brick_height * P_len_ - brick_len_offset_) / 2.0;
-                    rot_mtx = rot_mtx * z_180 * z_90;
+                    grab_offset_mtx(1, 3) = (brick_height * P_len_ - brick_len_offset_) / 2.0;
+                    grab_offset_mtx = grab_offset_mtx * z_180 * z_90;
                 } 
+                grab_pose_mtx = brick_pose_mtx * grab_offset_mtx;
             }
         }
     }
@@ -632,9 +661,7 @@ void Lego::calc_brick_grab_pose(const std::string& name, const bool& assemble_po
     brick_map_[name].in_stock = (math::ApproxEqNum(l_brick.x, l_brick.cur_x,EPS_) && 
                                 math::ApproxEqNum(l_brick.y, l_brick.cur_y,EPS_) && 
                                 math::ApproxEqNum(l_brick.z, l_brick.cur_z,EPS_));
-
-    T.block(0, 0, 3, 3) << rot_mtx;
-    T.block(0, 3, 3, 1) << x, y, z;
+    T = grab_pose_mtx;
 }
 
 
