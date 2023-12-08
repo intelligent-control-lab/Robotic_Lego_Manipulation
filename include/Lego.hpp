@@ -85,13 +85,14 @@ class Lego
 
         void update_all_top_bricks(const std::string& brick_name, const Eigen::Matrix4d& dT);
         void update(const std::string& brick_name, const Eigen::Matrix4d& T);
-        void calc_brick_loc(const std::string name, const lego_plate& plate, const int& orientation,
+        void calc_brick_loc(const lego_brick& brick, const lego_plate& plate, const int& orientation,
                             const int& brick_loc_x, const int& brick_loc_y, const int& brick_loc_z, 
                             Eigen::Matrix4d& out_pose);
         bool is_top_connect(const lego_brick& b1, const lego_brick& b2);
         bool is_bottom_connect(const lego_brick& b1, const lego_brick& b2);
         bool bricks_overlap(const lego_brick& b1, const lego_brick& b2);
         void get_brick_corners(const lego_brick& b1, double& lx, double& ly, double& rx, double& ry);
+        void brick_dimension_from_name(const std::string& b_name, int& height, int& width, const Json::Value& lego_lib);
 
 
     public:
@@ -99,7 +100,7 @@ class Lego
         ~Lego(){}
                 
         // Operations
-        void setup(const std::string& env_setup_fname, const bool& assemble, const Json::Value& task_json, 
+        void setup(const std::string& env_setup_fname, const std::string& lego_lib_fname, const bool& assemble, const Json::Value& task_json, 
                    const std::string& DH_fname, const std::string& DH_tool_fname, const std::string& DH_tool_disassemble_fname, const std::string& DH_tool_assemble_fname, 
                    const std::string& base_fname, const ros::ServiceClient& cli);
         void set_robot_base(const std::string& base_fname);

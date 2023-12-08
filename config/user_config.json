@@ -6,6 +6,7 @@
     "Robot_Base_fname":"/config/robot_properties/FANUC_base.txt",
     "Env_Setup_fname":"/config/env_setup.json",
     "Task_Graph_fname":"/config/assembly_tasks/chair.json",
+    "lego_lib_fname":"/config/lego_library.json",
     "Twist_Deg":14,
     "Waypoint_Travel_Time":0.5,
     "Infinite_Tasks":0,

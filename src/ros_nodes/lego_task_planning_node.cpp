@@ -36,7 +36,7 @@ int main(int argc, char **argv)
         async_spinner.start();
         ros::Rate loop_rate(150);
 
-        std::string config_fname, root_pwd, task_fname, DH_fname, DH_tool_fname, DH_tool_assemble_fname, DH_tool_disassemble_fname, 
+        std::string config_fname, root_pwd, task_fname, DH_fname, DH_tool_fname, DH_tool_assemble_fname, DH_tool_disassemble_fname, lego_lib_fname, 
                     robot_base_fname, env_setup_fname, robot_state_topic, controller_joint_goal_topic, controller_cart_goal_topic, 
                     controller_tracking_space_topic, controller_time_topic;
         int tracking_space = 0; // 0: joint, 1: Cart
@@ -55,6 +55,7 @@ int main(int argc, char **argv)
         robot_base_fname = root_pwd + config["Robot_Base_fname"].asString();
         env_setup_fname = root_pwd + config["Env_Setup_fname"].asString();
         task_fname = root_pwd + config["Task_Graph_fname"].asString();
+        lego_lib_fname = root_pwd + config["lego_lib_fname"].asString();
         robot_state_topic = config["ST_Controller_Topic"]["State"].asString();
         controller_joint_goal_topic = config["ST_Controller_Topic"]["Joint_Goal"].asString();
         controller_cart_goal_topic = config["ST_Controller_Topic"]["Cart_Goal"].asString();
@@ -71,7 +72,7 @@ int main(int argc, char **argv)
         task_file >> task_json;
 
         lego_manipulation::lego::Lego::Ptr lego_ptr = std::make_shared<lego_manipulation::lego::Lego>();
-        lego_ptr->setup(env_setup_fname, assemble, task_json, DH_fname, DH_tool_fname, DH_tool_disassemble_fname, DH_tool_assemble_fname, 
+        lego_ptr->setup(env_setup_fname, lego_lib_fname, assemble, task_json, DH_fname, DH_tool_fname, DH_tool_disassemble_fname, DH_tool_assemble_fname, 
                         robot_base_fname, set_state_client);
 
         Eigen::MatrixXd twist_R = Eigen::MatrixXd::Identity(3, 3);
