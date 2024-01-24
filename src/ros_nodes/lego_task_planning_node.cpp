@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 
         lego_manipulation::lego::Lego::Ptr lego_ptr = std::make_shared<lego_manipulation::lego::Lego>();
         lego_ptr->setup(env_setup_fname, lego_lib_fname, assemble, task_json, DH_fname, DH_tool_fname, DH_tool_disassemble_fname, DH_tool_assemble_fname, 
-                        robot_base_fname, set_state_client);
+                        robot_base_fname, 1, set_state_client);
 
         Eigen::MatrixXd twist_R = Eigen::MatrixXd::Identity(3, 3);
         Eigen::MatrixXd twist_T = Eigen::MatrixXd::Identity(4, 4);
@@ -126,11 +126,11 @@ int main(int argc, char **argv)
             {
                 if(pre_mode != mode)
                 {
-                    lego_ptr->update_bricks(robot_q, lego_ptr->robot_DH_tool(), lego_ptr->robot_base(), false, mode + twist_idx, brick_name);
+                    lego_ptr->update_bricks(robot_q, lego_ptr->robot_DH_tool(), lego_ptr->robot_base(), false, brick_name);
                 }
                 else
                 {
-                    lego_ptr->update_bricks(robot_q, lego_ptr->robot_DH_tool(), lego_ptr->robot_base(), false, 0, brick_name);
+                    lego_ptr->update_bricks(robot_q, lego_ptr->robot_DH_tool(), lego_ptr->robot_base(), false, brick_name);
                 }
             }
             pre_mode = mode;
