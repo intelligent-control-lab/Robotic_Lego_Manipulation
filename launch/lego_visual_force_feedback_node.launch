@@ -1,0 +1,6 @@
+<launch>
+    <node name="lego_manipulation_visual_force_feedback" pkg="lego_manipulation" type="lego_manipulation_visual_force_feedback" output="screen" required="true">
+        <param name="config_fname" value="$(find lego_manipulation)/config/user_config.json"/>
+        <param name="root_pwd" value="$(find lego_manipulation)/"/>
+    </node>
+</launch>
