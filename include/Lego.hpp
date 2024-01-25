@@ -1,6 +1,7 @@
 #pragma once
 #include "Utils/Math.hpp"
 #include "Utils/FileIO.hpp"
+#include "gazebo_msgs/SetModelState.h"
 
 namespace lego_manipulation
 {
@@ -61,18 +62,8 @@ class Lego
         double P_len_ = 0.008;
         double EPS_ = 0.00001;
         double knob_height_ = 0.0017;
-        double storage_plate_x_ = 0.0;
-        double storage_plate_y_ = 0.0;
-        double storage_plate_z_ = 0.0;
-        int storage_plate_width_ = 0;
-        int storage_plate_height_ = 0;
-        double assemble_plate_x_ = 0.0;
-        double assemble_plate_y_ = 0.0;
-        double assemble_plate_z_ = 0.0;
         lego_plate assemble_plate_;
         lego_plate storage_plate_;
-        int assemble_plate_width_ = 0;
-        int assemble_plate_height_ = 0;
         int robot_dof_ = 6;
 
         Eigen::MatrixXd DH_; // size = [n_joint + n_ee, 4]
@@ -102,16 +93,18 @@ class Lego
         // Operations
         void setup(const std::string& env_setup_fname, const std::string& lego_lib_fname, const bool& assemble, const Json::Value& task_json, 
                    const std::string& DH_fname, const std::string& DH_tool_fname, const std::string& DH_tool_disassemble_fname, const std::string& DH_tool_assemble_fname, 
-                   const std::string& base_fname, const ros::ServiceClient& cli);
+                   const std::string& base_fname, const bool& use_config_file, const ros::ServiceClient& cli);
         void set_robot_base(const std::string& base_fname);
         void set_DH(const std::string& DH_fname);
         void set_DH_tool(const std::string& DH_tool_fname);
         void set_DH_tool_assemble(const std::string& DH_tool_assemble_fname);
         void set_DH_tool_disassemble(const std::string& DH_tool_disassemble_fname);
         void print_manipulation_property();
+        void set_assemble_plate_pose(const double& x, const double& y, const double& z, const double& roll, const double& pitch, const double& yaw);
+        void set_storage_plate_pose(const double& x, const double& y, const double& z, const double& roll, const double& pitch, const double& yaw);
 
         void update_bricks(const math::VectorJd& robot_q, const Eigen::MatrixXd& DH, const Eigen::MatrixXd& base_frame, 
-                           const bool& joint_rad, const int& task_mode, const std::string& brick_name);
+                           const bool& joint_rad, const std::string& brick_name);
         std::string get_brick_name_by_id(const int& id, const int& seq_id);
         void update_brick_connection();
         void calc_brick_grab_pose(const std::string& name, const bool& assemble_pose, const bool& take_brick,
@@ -131,6 +124,18 @@ class Lego
         Eigen::Matrix4d robot_tool_disassemble_inv() {return tool_disassemble_inv_;};
         bool robot_is_static(math::VectorJd robot_qd, math::VectorJd robot_qdd);
         bool robot_reached_goal(math::VectorJd robot_q, math::VectorJd goal);
+        double assemble_plate_x() {return assemble_plate_.x;};
+        double assemble_plate_y() {return assemble_plate_.y;};
+        double assemble_plate_z() {return assemble_plate_.z;};
+        double assemble_plate_roll() {return assemble_plate_.roll;};
+        double assemble_plate_pitch() {return assemble_plate_.pitch;};
+        double assemble_plate_yaw() {return assemble_plate_.yaw;};
+        double storage_plate_x() {return storage_plate_.x;};
+        double storage_plate_y() {return storage_plate_.y;};
+        double storage_plate_z() {return storage_plate_.z;};
+        double storage_plate_roll() {return storage_plate_.roll;};
+        double storage_plate_pitch() {return storage_plate_.pitch;};
+        double storage_plate_yaw() {return storage_plate_.yaw;};
 };
 }
 }

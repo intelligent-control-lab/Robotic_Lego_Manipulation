@@ -620,7 +620,7 @@ VectorJd IK_closed_form(const VectorJd& cur_q, const Eigen::Matrix4d& goal_T, co
 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(stop - start);
-    std::cout << "IK closed form calc time: " << duration.count() / 1000000.0 << " s" << std::endl;
+    ROS_INFO_STREAM("IK closed form calc time: " << duration.count() / 1000000.0 << " s");
     return theta;
 }
 
@@ -673,7 +673,7 @@ VectorJd IK(const VectorJd& q, const Eigen::Matrix<double, 3, 1>& cart_goal, con
         error = get_6d_error(pos_s, quat_s, pos_e, quat_e);
         iter_num ++;
     }
-    std::cout << "IK iter num: " << iter_num << std::endl;
+    ROS_INFO_STREAM("IK iter num: " << iter_num);
     // Rad to Deg
     for(int i=0; i<q.rows(); i++)
     {
@@ -690,7 +690,7 @@ VectorJd IK(const VectorJd& q, const Eigen::Matrix<double, 3, 1>& cart_goal, con
 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(stop - start);
-    std::cout << "IK calc time: " << duration.count() / 1000000.0 << " s" << std::endl;
+    ROS_INFO_STREAM("IK calc time: " << duration.count() / 1000000.0 << " s");
     return theta;
 }
 
