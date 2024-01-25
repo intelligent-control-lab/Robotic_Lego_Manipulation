@@ -99,7 +99,7 @@ int main(int argc, char **argv)
         Eigen::MatrixXd home_q(lego_ptr->robot_dof(), 1);
         home_q.col(0) << 0, 0, 0, 0, -90, 0;
         Eigen::Matrix4d home_T = lego_manipulation::math::FK(home_q, lego_ptr->robot_DH(), lego_ptr->robot_base(), false);
-        home_T.col(3) << 0.6, 0, 0.4, 1; // Home X, Y, Z in base frame of the Flange
+        home_T.col(3) << 0.3, 0, 0.4, 1; // Home X, Y, Z in base frame of the Flange
         home_q = lego_manipulation::math::IK(home_q, home_T.block(0, 3, 3, 1), home_T.block(0, 0, 3, 3),
                                              lego_ptr->robot_DH(), lego_ptr->robot_base(), 0, 10e6, 10e-3); // Home
 
