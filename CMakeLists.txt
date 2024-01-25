@@ -103,14 +103,6 @@ target_link_libraries(${PROJECT_NAME}_fts
     ${catkin_LIBRARIES}
 )
 
-add_executable(${PROJECT_NAME}_visual_force_feedback
-  src/ros_nodes/lego_visual_force_feedback_node.cpp
-)
-target_link_libraries(${PROJECT_NAME}_visual_force_feedback
-    ${PROJECT_NAME}
-    ${catkin_LIBRARIES}
-)
-
 add_executable(${PROJECT_NAME}_task_planning
   src/ros_nodes/lego_task_planning_node.cpp
 )
