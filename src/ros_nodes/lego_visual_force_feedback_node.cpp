@@ -1,6 +1,7 @@
 #include "Lego.hpp"
 // HEADER FILES FOR SERVICE INTERFACE WITH YK ROBOT
 #include "geometry_msgs/Pose.h"
+#include "geometry_msgs/WrenchStamped.h"
 #include "lego_manipulation/SetPose.h"
 
 // HEADER FILES FOR API INTERFACE WITH YK ROBOT
