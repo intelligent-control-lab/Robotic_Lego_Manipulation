@@ -137,7 +137,7 @@ void Lego::setup(const std::string& env_setup_fname, const std::string& lego_lib
         }
         else
         {
-            ROS_INFO_STREAM("Unknown brick type!");
+            ROS_INFO_STREAM("Unknown brick type: " << brick.name() << " !");
             continue;
         }
         brick_pose.pose.position.x = x;
@@ -301,7 +301,6 @@ void Lego::calc_brick_loc(const lego_brick& brick, const lego_plate& plate, cons
 {
     int brick_height = brick.height;
     int brick_width = brick.width;
-    std::cout<<brick.brick_name<<" "<<brick_height<<" "<<brick_width<<std::endl;
     Eigen::Matrix4d refpose = plate.pose;
     Eigen::Matrix4d topleft_offset = Eigen::Matrix4d::Identity(4, 4);
     Eigen::Matrix4d brick_offset = Eigen::Matrix4d::Identity(4, 4);
@@ -645,7 +644,7 @@ std::string Lego::get_brick_name_by_id(const int& id, const int& seq_id)
     std::string brick_name = "b" + std::to_string(id) + "_" + std::to_string(seq_id);
     if(brick_map_.find(brick_name) == brick_map_.end())
     {
-        ROS_INFO_STREAM("No available brick!");
+        ROS_INFO_STREAM("No available brick! ID: " << id << ", Seq ID: " << seq_id);
     }
     return brick_name;
 }
