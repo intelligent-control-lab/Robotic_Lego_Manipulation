@@ -159,7 +159,7 @@ void Lego::setup(const std::string& env_setup_fname, const std::string& lego_lib
             auto cur_graph_node = task_json[std::to_string(i)];
             brick_name = get_brick_name_by_id(cur_graph_node["brick_id"].asInt(), cur_graph_node["brick_seq"].asInt());
             calc_brick_loc(brick_map_[brick_name], assemble_plate_, cur_graph_node["ori"].asInt(),
-                           cur_graph_node["x"].asInt(), cur_graph_node["y"].asInt(), cur_graph_node["z"].asInt()+1,
+                           cur_graph_node["x"].asInt(), cur_graph_node["y"].asInt(), cur_graph_node["z"].asInt(),
                            brick_pose_mtx);
             x = brick_pose_mtx(0, 3);
             y = brick_pose_mtx(1, 3);
