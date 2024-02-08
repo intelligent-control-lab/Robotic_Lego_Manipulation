@@ -9,8 +9,10 @@ Lego::Lego()
 }
         
 void Lego::setup(const std::string& env_setup_fname, const std::string& lego_lib_fname, const bool& assemble, const Json::Value& task_json, 
-                 const std::string& DH_fname, const std::string& DH_tool_fname, const std::string& DH_tool_disassemble_fname, const std::string& DH_tool_assemble_fname, 
-                 const std::string& base_fname, const bool& use_config_file, const ros::ServiceClient& cli)
+                   const std::string& r1_DH_fname, const std::string& r1_DH_tool_fname, const std::string& r1_DH_tool_disassemble_fname, 
+                   const std::string& r1_DH_tool_assemble_fname, const std::string& r1_base_fname, 
+                   const std::string& r2_DH_fname, const std::string& r2_DH_tool_fname, const std::string& r2_DH_tool_disassemble_fname, 
+                   const std::string& r2_DH_tool_assemble_fname, const std::string& r2_base_fname,const bool& use_config_file, const ros::ServiceClient& cli)
 {
     client_ = cli;
 
@@ -27,11 +29,11 @@ void Lego::setup(const std::string& env_setup_fname, const std::string& lego_lib
     std::ifstream lego_lib_file(lego_lib_fname, std::ifstream::binary);
     Json::Value lego_library;
 
-    set_robot_base(base_fname);
-    set_DH(DH_fname);
-    set_DH_tool(DH_tool_fname);
-    set_DH_tool_assemble(DH_tool_assemble_fname);
-    set_DH_tool_disassemble(DH_tool_disassemble_fname);
+    set_robot_base(r1_base_fname, r2_base_fname);
+    set_DH(r1_DH_fname, r2_DH_fname);
+    set_DH_tool(r1_DH_tool_fname, r2_DH_tool_fname);
+    set_DH_tool_assemble(r1_DH_tool_assemble_fname, r2_DH_tool_assemble_fname);
+    set_DH_tool_disassemble(r1_DH_tool_disassemble_fname, r2_DH_tool_disassemble_fname);
     print_manipulation_property();
     config_file >> config;
     lego_lib_file >> lego_library;
@@ -195,72 +197,118 @@ void Lego::brick_dimension_from_name(const std::string& b_name, int& height, int
     width = lego_lib[id]["width"].asInt();
 }
 
-void Lego::set_robot_base(const std::string& fname)
+void Lego::set_robot_base(const std::string& r1_fname, const std::string& r2_fname)
 {
-    ROS_INFO_STREAM("Load Robot Base from: " << fname);
-    base_frame_ = io::LoadMatFromFile(fname);
-    T_base_inv_ = Eigen::Matrix4d::Identity(4, 4);
-    T_base_inv_.col(3) << base_frame_, 1;
-    T_base_inv_ = math::PInv(T_base_inv_);
+    ROS_INFO_STREAM("Load Robot 1 Base from: " << r1_fname);
+    r1_base_frame_ = io::LoadMatFromFile(r1_fname);
+    r1_T_base_inv_ = r1_base_frame_;
+    r1_T_base_inv_ = math::PInv(r1_T_base_inv_);
+
+    ROS_INFO_STREAM("Load Robot 2 Base from: " << r2_fname);
+    r2_base_frame_ = io::LoadMatFromFile(r2_fname);
+    r2_T_base_inv_ = r2_base_frame_;
+    r2_T_base_inv_ = math::PInv(r2_T_base_inv_);
 }
 
 void Lego::print_manipulation_property()
 {
-    ROS_INFO_STREAM("\nRobot Base: \n" << base_frame_);
-    ROS_INFO_STREAM("\nRobot DH: \n" << DH_);
-    ROS_INFO_STREAM("\nRobot Tool DH: \n" << DH_tool_);
-    ROS_INFO_STREAM("\nRobot Tool Disassemble DH: \n" << DH_tool_disassemble_);
-    ROS_INFO_STREAM("\nRobot Tool Assemble DH: \n" << DH_tool_assemble_);
+    ROS_INFO_STREAM("\nRobot 1 Base: \n" << r1_base_frame_);
+    ROS_INFO_STREAM("\nRobot 1 DH: \n" << r1_DH_);
+    ROS_INFO_STREAM("\nRobot 1 Tool DH: \n" << r1_DH_tool_);
+    ROS_INFO_STREAM("\nRobot 1 Tool Disassemble DH: \n" << r1_DH_tool_disassemble_);
+    ROS_INFO_STREAM("\nRobot 1 Tool Assemble DH: \n" << r1_DH_tool_assemble_);
+
+    ROS_INFO_STREAM("\nRobot 2 Base: \n" << r2_base_frame_);
+    ROS_INFO_STREAM("\nRobot 2 DH: \n" << r2_DH_);
+    ROS_INFO_STREAM("\nRobot 2 Tool DH: \n" << r2_DH_tool_);
+    ROS_INFO_STREAM("\nRobot 2 Tool Disassemble DH: \n" << r2_DH_tool_disassemble_);
+    ROS_INFO_STREAM("\nRobot 2 Tool Assemble DH: \n" << r2_DH_tool_assemble_);
     std::cout << "\n" << std::endl;
 }
 
-void Lego::set_DH(const std::string& fname)
+void Lego::set_DH(const std::string& r1_fname, const std::string& r2_fname)
 {
-    ROS_INFO_STREAM("Load Robot DH from: " << fname);
-    DH_ = io::LoadMatFromFile(fname);
-    ee_inv_ = Eigen::Matrix4d::Identity(4, 4); 
-    ee_inv_ << cos(0), -sin(0)*cos(0),  sin(0)*sin(0),  DH_(5, 2) * cos(0),
-               sin(0),  cos(0)*cos(0), -cos(0)*sin(0),  DH_(5, 2) * sin(0),
-               0,       sin(0),         cos(0),        -DH_(5, 1),
+    ROS_INFO_STREAM("Load Robot 1 DH from: " << r1_fname);
+    r1_DH_ = io::LoadMatFromFile(r1_fname);
+    r1_ee_inv_ = Eigen::Matrix4d::Identity(4, 4); 
+    r1_ee_inv_ << cos(0), -sin(0)*cos(0),  sin(0)*sin(0),  r1_DH_(5, 2) * cos(0),
+               sin(0),  cos(0)*cos(0), -cos(0)*sin(0),  r1_DH_(5, 2) * sin(0),
+               0,       sin(0),         cos(0),        -r1_DH_(5, 1),
                0,       0,              0,              1;
-    ee_inv_ = math::PInv(ee_inv_);
+    r1_ee_inv_ = math::PInv(r1_ee_inv_);
+
+    ROS_INFO_STREAM("Load Robot 2 DH from: " << r2_fname);
+    r2_DH_ = io::LoadMatFromFile(r2_fname);
+    r2_ee_inv_ = Eigen::Matrix4d::Identity(4, 4); 
+    r2_ee_inv_ << cos(0), -sin(0)*cos(0),  sin(0)*sin(0),  r2_DH_(5, 2) * cos(0),
+               sin(0),  cos(0)*cos(0), -cos(0)*sin(0),  r2_DH_(5, 2) * sin(0),
+               0,       sin(0),         cos(0),        -r2_DH_(5, 1),
+               0,       0,              0,              1;
+    r2_ee_inv_ = math::PInv(r2_ee_inv_);
 }
 
 
-void Lego::set_DH_tool(const std::string& fname)
+void Lego::set_DH_tool(const std::string& r1_fname, const std::string& r2_fname)
 {
-    ROS_INFO_STREAM("Load DH tool from: " << fname);
-    DH_tool_ = io::LoadMatFromFile(fname);
-    tool_inv_ = Eigen::Matrix4d::Identity(4, 4); 
-    tool_inv_ << cos(0), -sin(0)*cos(0),  sin(0)*sin(0),  DH_tool_(5, 2) * cos(0),
-                 sin(0),  cos(0)*cos(0), -cos(0)*sin(0),  DH_tool_(5, 2) * sin(0),
-                 0,       sin(0),         cos(0),        -DH_tool_(5, 1),
+    ROS_INFO_STREAM("Load r1 DH tool from: " << r1_fname);
+    r1_DH_tool_ = io::LoadMatFromFile(r1_fname);
+    r1_tool_inv_ = Eigen::Matrix4d::Identity(4, 4); 
+    r1_tool_inv_ << cos(0), -sin(0)*cos(0),  sin(0)*sin(0),  r1_DH_tool_(5, 2) * cos(0),
+                 sin(0),  cos(0)*cos(0), -cos(0)*sin(0),  r1_DH_tool_(5, 2) * sin(0),
+                 0,       sin(0),         cos(0),        -r1_DH_tool_(5, 1),
                  0,       0,              0,              1;
-    tool_inv_ = math::PInv(tool_inv_);
+    r1_tool_inv_ = math::PInv(r1_tool_inv_);
+
+    ROS_INFO_STREAM("Load r2 DH tool from: " << r2_fname);
+    r2_DH_tool_ = io::LoadMatFromFile(r2_fname);
+    r2_tool_inv_ = Eigen::Matrix4d::Identity(4, 4); 
+    r2_tool_inv_ << cos(0), -sin(0)*cos(0),  sin(0)*sin(0),  r2_DH_tool_(5, 2) * cos(0),
+                 sin(0),  cos(0)*cos(0), -cos(0)*sin(0),  r2_DH_tool_(5, 2) * sin(0),
+                 0,       sin(0),         cos(0),        -r2_DH_tool_(5, 1),
+                 0,       0,              0,              1;
+    r2_tool_inv_ = math::PInv(r2_tool_inv_);
 }
 
-void Lego::set_DH_tool_assemble(const std::string& fname)
+void Lego::set_DH_tool_assemble(const std::string& r1_fname, const std::string& r2_fname)
 {
-    ROS_INFO_STREAM("Load DH tool for assemble from: " << fname);
-    DH_tool_assemble_ = io::LoadMatFromFile(fname);
-    tool_assemble_inv_ = Eigen::Matrix4d::Identity(4, 4); 
-    tool_assemble_inv_ << cos(0), -sin(0)*cos(0),  sin(0)*sin(0),  DH_tool_assemble_(5, 2) * cos(0),
-                          sin(0),  cos(0)*cos(0), -cos(0)*sin(0),  DH_tool_assemble_(5, 2) * sin(0),
-                          0,       sin(0),         cos(0),        -DH_tool_assemble_(5, 1),
+    ROS_INFO_STREAM("Load r1 DH tool for assemble from: " << r1_fname);
+    r1_DH_tool_assemble_ = io::LoadMatFromFile(r1_fname);
+    r1_tool_assemble_inv_ = Eigen::Matrix4d::Identity(4, 4); 
+    r1_tool_assemble_inv_ << cos(0), -sin(0)*cos(0),  sin(0)*sin(0),  r1_DH_tool_assemble_(5, 2) * cos(0),
+                          sin(0),  cos(0)*cos(0), -cos(0)*sin(0),  r1_DH_tool_assemble_(5, 2) * sin(0),
+                          0,       sin(0),         cos(0),        -r1_DH_tool_assemble_(5, 1),
                           0,       0,              0,              1;
-    tool_assemble_inv_ = math::PInv(tool_assemble_inv_);
+    r1_tool_assemble_inv_ = math::PInv(r1_tool_assemble_inv_);
+
+    ROS_INFO_STREAM("Load r2 DH tool for assemble from: " << r2_fname);
+    r2_DH_tool_assemble_ = io::LoadMatFromFile(r2_fname);
+    r2_tool_assemble_inv_ = Eigen::Matrix4d::Identity(4, 4); 
+    r2_tool_assemble_inv_ << cos(0), -sin(0)*cos(0),  sin(0)*sin(0),  r2_DH_tool_assemble_(5, 2) * cos(0),
+                          sin(0),  cos(0)*cos(0), -cos(0)*sin(0),  r2_DH_tool_assemble_(5, 2) * sin(0),
+                          0,       sin(0),         cos(0),        -r2_DH_tool_assemble_(5, 1),
+                          0,       0,              0,              1;
+    r2_tool_assemble_inv_ = math::PInv(r2_tool_assemble_inv_);
 }
 
-void Lego::set_DH_tool_disassemble(const std::string& fname)
+void Lego::set_DH_tool_disassemble(const std::string& r1_fname, const std::string& r2_fname)
 {
-    ROS_INFO_STREAM("Load DH tool for disassemble from: " << fname);
-    DH_tool_disassemble_ = io::LoadMatFromFile(fname);
-    tool_disassemble_inv_ = Eigen::Matrix4d::Identity(4, 4);
-    tool_disassemble_inv_ << cos(0), -sin(0)*cos(0),  sin(0)*sin(0),  DH_tool_disassemble_(5, 2) * cos(0),
-                             sin(0),  cos(0)*cos(0), -cos(0)*sin(0),  DH_tool_disassemble_(5, 2) * sin(0),
-                             0,       sin(0),         cos(0),        -DH_tool_disassemble_(5, 1),
+    ROS_INFO_STREAM("Load r1 DH tool for disassemble from: " << r1_fname);
+    r1_DH_tool_disassemble_ = io::LoadMatFromFile(r1_fname);
+    r1_tool_disassemble_inv_ = Eigen::Matrix4d::Identity(4, 4);
+    r1_tool_disassemble_inv_ << cos(0), -sin(0)*cos(0),  sin(0)*sin(0),  r1_DH_tool_disassemble_(5, 2) * cos(0),
+                             sin(0),  cos(0)*cos(0), -cos(0)*sin(0),  r1_DH_tool_disassemble_(5, 2) * sin(0),
+                             0,       sin(0),         cos(0),        -r1_DH_tool_disassemble_(5, 1),
                              0,       0,              0,              1;
-    tool_disassemble_inv_ = math::PInv(tool_disassemble_inv_);
+    r1_tool_disassemble_inv_ = math::PInv(r1_tool_disassemble_inv_);
+
+    ROS_INFO_STREAM("Load r2 DH tool for disassemble from: " << r2_fname);
+    r2_DH_tool_disassemble_ = io::LoadMatFromFile(r2_fname);
+    r2_tool_disassemble_inv_ = Eigen::Matrix4d::Identity(4, 4);
+    r2_tool_disassemble_inv_ << cos(0), -sin(0)*cos(0),  sin(0)*sin(0),  r2_DH_tool_disassemble_(5, 2) * cos(0),
+                             sin(0),  cos(0)*cos(0), -cos(0)*sin(0),  r2_DH_tool_disassemble_(5, 2) * sin(0),
+                             0,       sin(0),         cos(0),        -r2_DH_tool_disassemble_(5, 1),
+                             0,       0,              0,              1;
+    r2_tool_disassemble_inv_ = math::PInv(r2_tool_disassemble_inv_);
 }
 
 void Lego::set_assemble_plate_pose(const double& x, const double& y, const double& z, const double& roll, const double& pitch, const double& yaw)
@@ -918,15 +966,14 @@ void Lego::update_bricks(const math::VectorJd& robot_q, const Eigen::MatrixXd& D
                                 const bool& joint_rad, const std::string& brick_name)
 {
     Eigen::Matrix4d T = math::FK(robot_q, DH, base_frame, joint_rad);
-    Eigen::Matrix4d tmp;
     std::string closest_brick_name = brick_name;
     update(brick_name, T);
 }
 
 
-bool Lego::robot_is_static(math::VectorJd robot_qd, math::VectorJd robot_qdd)
+bool Lego::robot_is_static(math::VectorJd robot_qd, math::VectorJd robot_qdd, const int& robot_dof)
 {
-    for(int i=0; i<robot_dof_; i++)
+    for(int i=0; i<robot_dof; i++)
     {
         if(abs(robot_qd(i)) > EPS_ || abs(robot_qdd(i)) > EPS_)
         {
@@ -937,9 +984,9 @@ bool Lego::robot_is_static(math::VectorJd robot_qd, math::VectorJd robot_qdd)
 }
 
 
-bool Lego::robot_reached_goal(math::VectorJd robot_q, math::VectorJd goal)
+bool Lego::robot_reached_goal(math::VectorJd robot_q, math::VectorJd goal, const int& robot_dof)
 {
-    for(int i=0; i<robot_dof_; i++)
+    for(int i=0; i<robot_dof; i++)
     {
         if(abs(robot_q(i) - goal(i)) > EPS_)
         {
