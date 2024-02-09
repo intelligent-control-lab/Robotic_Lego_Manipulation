@@ -170,7 +170,7 @@ int main(int argc, char **argv)
         lego_manipulation::math::VectorJd r2_cur_goal = home_q;
         std::string brick_name;
         bool move_on_to_next = use_yk;
-        Eigen::MatrixXd record(1000, 16);
+        Eigen::MatrixXd record(1000, 28);
         int record_cnt = 0;
 
         while(ros::ok)
@@ -413,7 +413,9 @@ int main(int argc, char **argv)
                 Eigen::Quaterniond r2_quat(r2_goal_rot);
 
                 record.row(record_cnt) << use_r1, r1_cart_T_goal(0, 3), r1_cart_T_goal(1, 3), r1_cart_T_goal(2, 3), r1_quat.x(), r1_quat.y(), r1_quat.z(), r1_quat.w(),
-                                          use_r2, r2_cart_T_goal(0, 3), r2_cart_T_goal(1, 3), r2_cart_T_goal(2, 3), r2_quat.x(), r2_quat.y(), r2_quat.z(), r2_quat.w();
+                                          r1_cur_goal(0), r1_cur_goal(1), r1_cur_goal(2), r1_cur_goal(3), r1_cur_goal(4), r1_cur_goal(5),
+                                          use_r2, r2_cart_T_goal(0, 3), r2_cart_T_goal(1, 3), r2_cart_T_goal(2, 3), r2_quat.x(), r2_quat.y(), r2_quat.z(), r2_quat.w(),
+                                          r2_cur_goal(0), r2_cur_goal(1), r2_cur_goal(2), r2_cur_goal(3), r2_cur_goal(4), r2_cur_goal(5);
                 record_cnt ++;
             }
 
@@ -476,7 +478,7 @@ int main(int argc, char **argv)
                 }
             }
         }
-        lego_manipulation::io::SaveMatToFile(record.block(0, 0, record_cnt, 16), root_pwd + "/record_steps.txt");
+        lego_manipulation::io::SaveMatToFile(record.block(0, 0, record_cnt, 28), root_pwd + "/record_steps.txt");
         ROS_INFO_STREAM("Task Execution Done!");
         ros::shutdown();
         return 0;
