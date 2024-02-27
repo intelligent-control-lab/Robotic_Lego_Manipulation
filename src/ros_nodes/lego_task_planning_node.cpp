@@ -48,7 +48,7 @@ int main(int argc, char **argv)
         async_spinner.start();
         ros::Rate loop_rate(150);
 
-        std::string config_fname, root_pwd, task_fname;
+        std::string config_fname, root_pwd, task_fname, world_base_fname;
         std::string r1_DH_fname, r1_DH_tool_fname, r1_DH_tool_assemble_fname, r1_DH_tool_disassemble_fname, r1_robot_base_fname;
         std::string r2_DH_fname, r2_DH_tool_fname, r2_DH_tool_assemble_fname, r2_DH_tool_disassemble_fname, r2_robot_base_fname;
         std::string lego_lib_fname, env_setup_fname;
@@ -64,6 +64,7 @@ int main(int argc, char **argv)
         std::ifstream config_file(config_fname, std::ifstream::binary);
         Json::Value config;
         config_file >> config;
+        world_base_fname = root_pwd + config["world_base_fname"].asString();
         r1_DH_fname = root_pwd + config["r1_DH_fname"].asString();
         r1_DH_tool_fname = root_pwd + config["r1_DH_tool_fname"].asString();
         r1_DH_tool_assemble_fname = root_pwd + config["r1_DH_tool_assemble_fname"].asString();
@@ -100,7 +101,7 @@ int main(int argc, char **argv)
         task_file >> task_json;
 
         lego_manipulation::lego::Lego::Ptr lego_ptr = std::make_shared<lego_manipulation::lego::Lego>();
-        lego_ptr->setup(env_setup_fname, lego_lib_fname, assemble, task_json, 
+        lego_ptr->setup(env_setup_fname, lego_lib_fname, assemble, task_json, world_base_fname,
                         r1_DH_fname, r1_DH_tool_fname, r1_DH_tool_disassemble_fname, r1_DH_tool_assemble_fname, r1_robot_base_fname, 
                         r2_DH_fname, r2_DH_tool_fname, r2_DH_tool_disassemble_fname, r2_DH_tool_assemble_fname, r2_robot_base_fname, 
                         1, set_state_client);
@@ -135,6 +136,7 @@ int main(int argc, char **argv)
         home_q.col(0) << 0, 0, 0, 0, -90, 0;
         Eigen::Matrix4d home_T = lego_manipulation::math::FK(home_q, lego_ptr->robot_DH_r1(), lego_ptr->robot_base_r1(), false);
         home_T.col(3) << 0.2, 0, 0.4, 1; // Home X, Y, Z in base frame of the Flange
+        home_T = lego_ptr->world_base_frame() * home_T;
 
         Eigen::Matrix4d y_n90, z_180;
         y_n90 << 0, 0, -1, 0, 

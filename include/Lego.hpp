@@ -31,13 +31,6 @@ struct lego_brick{
 struct lego_plate{
     int height;
     int width;
-    double x;
-    double y;
-    double z;
-    double roll;
-    double pitch;
-    double yaw;
-    Eigen::Quaterniond quat;
     Eigen::Matrix4d pose;
 };
 
@@ -66,6 +59,8 @@ class Lego
         lego_plate storage_plate_;
         int r1_robot_dof_ = 6;
         int r2_robot_dof_ = 6;
+        Eigen::Matrix4d world_base_frame_;
+        Eigen::Matrix4d world_T_base_inv_;
 
         Eigen::MatrixXd r1_DH_; // size = [n_joint + n_ee, 4]
         Eigen::Matrix4d r1_ee_inv_, r1_tool_inv_, r1_tool_assemble_inv_, r1_tool_disassemble_inv_;
@@ -100,7 +95,7 @@ class Lego
         ~Lego(){}
                 
         // Operations
-        void setup(const std::string& env_setup_fname, const std::string& lego_lib_fname, const bool& assemble, const Json::Value& task_json, 
+        void setup(const std::string& env_setup_fname, const std::string& lego_lib_fname, const bool& assemble, const Json::Value& task_json, const std::string& world_base_fname,
                    const std::string& r1_DH_fname, const std::string& r1_DH_tool_fname, const std::string& r1_DH_tool_disassemble_fname, 
                    const std::string& r1_DH_tool_assemble_fname, const std::string& r1_base_fname, 
                    const std::string& r2_DH_fname, const std::string& r2_DH_tool_fname, const std::string& r2_DH_tool_disassemble_fname, 
@@ -113,6 +108,7 @@ class Lego
         void print_manipulation_property();
         void set_assemble_plate_pose(const double& x, const double& y, const double& z, const double& roll, const double& pitch, const double& yaw);
         void set_storage_plate_pose(const double& x, const double& y, const double& z, const double& roll, const double& pitch, const double& yaw);
+        void set_world_base(const std::string& world_base_fname);
 
         void update_bricks(const math::VectorJd& robot_q, const Eigen::MatrixXd& DH, const Eigen::MatrixXd& base_frame, 
                            const bool& joint_rad, const std::string& brick_name);
@@ -124,6 +120,8 @@ class Lego
         int brick_instock(const std::string& name) {return brick_map_[name].in_stock;};
         int robot_dof_1() {return r1_robot_dof_;};
         int robot_dof_2() {return r2_robot_dof_;};
+        Eigen::MatrixXd world_base_frame() {return world_base_frame_;};
+        Eigen::MatrixXd world_base_inv() {return world_T_base_inv_;};
         Eigen::MatrixXd robot_DH_r1() {return r1_DH_;};
         Eigen::MatrixXd robot_DH_tool_r1() {return r1_DH_tool_;};
         Eigen::MatrixXd robot_DH_tool_assemble_r1() {return r1_DH_tool_assemble_;};
@@ -147,18 +145,8 @@ class Lego
 
         bool robot_is_static(math::VectorJd robot_qd, math::VectorJd robot_qdd, const int& robot_dof);
         bool robot_reached_goal(math::VectorJd robot_q, math::VectorJd goal, const int& robot_dof);
-        double assemble_plate_x() {return assemble_plate_.x;};
-        double assemble_plate_y() {return assemble_plate_.y;};
-        double assemble_plate_z() {return assemble_plate_.z;};
-        double assemble_plate_roll() {return assemble_plate_.roll;};
-        double assemble_plate_pitch() {return assemble_plate_.pitch;};
-        double assemble_plate_yaw() {return assemble_plate_.yaw;};
-        double storage_plate_x() {return storage_plate_.x;};
-        double storage_plate_y() {return storage_plate_.y;};
-        double storage_plate_z() {return storage_plate_.z;};
-        double storage_plate_roll() {return storage_plate_.roll;};
-        double storage_plate_pitch() {return storage_plate_.pitch;};
-        double storage_plate_yaw() {return storage_plate_.yaw;};
+        Eigen::Matrix4d assemble_plate_pose() {return assemble_plate_.pose;};
+        Eigen::Matrix4d storage_plate_pose() {return storage_plate_.pose;};
         double brick_height() {return brick_height_m_;};
 };
 }

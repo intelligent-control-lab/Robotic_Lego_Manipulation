@@ -8,7 +8,7 @@ Lego::Lego()
 {
 }
         
-void Lego::setup(const std::string& env_setup_fname, const std::string& lego_lib_fname, const bool& assemble, const Json::Value& task_json, 
+void Lego::setup(const std::string& env_setup_fname, const std::string& lego_lib_fname, const bool& assemble, const Json::Value& task_json, const std::string& world_base_fname,
                    const std::string& r1_DH_fname, const std::string& r1_DH_tool_fname, const std::string& r1_DH_tool_disassemble_fname, 
                    const std::string& r1_DH_tool_assemble_fname, const std::string& r1_base_fname, 
                    const std::string& r2_DH_fname, const std::string& r2_DH_tool_fname, const std::string& r2_DH_tool_disassemble_fname, 
@@ -29,6 +29,7 @@ void Lego::setup(const std::string& env_setup_fname, const std::string& lego_lib
     std::ifstream lego_lib_file(lego_lib_fname, std::ifstream::binary);
     Json::Value lego_library;
 
+    set_world_base(world_base_fname);
     set_robot_base(r1_base_fname, r2_base_fname);
     set_DH(r1_DH_fname, r2_DH_fname);
     set_DH_tool(r1_DH_tool_fname, r2_DH_tool_fname);
@@ -45,52 +46,55 @@ void Lego::setup(const std::string& env_setup_fname, const std::string& lego_lib
         {
             if(use_config_file)
             {
-                storage_plate_.x = (*brick)["x"].asDouble();
-                storage_plate_.y = (*brick)["y"].asDouble();
-                storage_plate_.z = (*brick)["z"].asDouble();
-                storage_plate_.roll = (*brick)["roll"].asDouble();
-                storage_plate_.pitch = (*brick)["pitch"].asDouble();
-                storage_plate_.yaw = (*brick)["yaw"].asDouble();
-                Eigen::AngleAxisd rollAngle(storage_plate_.roll, Eigen::Vector3d::UnitX());
-                Eigen::AngleAxisd pitchAngle(storage_plate_.pitch, Eigen::Vector3d::UnitY());
-                Eigen::AngleAxisd yawAngle(storage_plate_.yaw, Eigen::Vector3d::UnitZ());
-                storage_plate_.quat = yawAngle * pitchAngle * rollAngle;
+                double x = (*brick)["x"].asDouble();
+                double y = (*brick)["y"].asDouble();
+                double z = (*brick)["z"].asDouble();
+                double roll = (*brick)["roll"].asDouble();
+                double pitch = (*brick)["pitch"].asDouble();
+                double yaw = (*brick)["yaw"].asDouble();
+                Eigen::AngleAxisd rollAngle(roll, Eigen::Vector3d::UnitX());
+                Eigen::AngleAxisd pitchAngle(pitch, Eigen::Vector3d::UnitY());
+                Eigen::AngleAxisd yawAngle(yaw, Eigen::Vector3d::UnitZ());
+                Eigen::Quaterniond quat = yawAngle * pitchAngle * rollAngle;
                 storage_plate_.pose = Eigen::Matrix4d::Identity(4, 4);
-                storage_plate_.pose.block(0, 0, 3, 3) = storage_plate_.quat.matrix();
-                storage_plate_.pose.col(3) << storage_plate_.x, storage_plate_.y, storage_plate_.z, 1;
+                storage_plate_.pose.block(0, 0, 3, 3) = quat.matrix();
+                storage_plate_.pose.col(3) << x, y, z, 1;
                 storage_plate_.width = (*brick)["width"].asInt();
                 storage_plate_.height = (*brick)["height"].asInt();
             }
-            x = storage_plate_.x;
-            y = storage_plate_.y;
-            z = storage_plate_.z;
-            quat = storage_plate_.quat;
+            storage_plate_.pose = world_base_frame_ * storage_plate_.pose;
+            x = storage_plate_.pose(0, 3);
+            y = storage_plate_.pose(1, 3);
+            z = storage_plate_.pose(2, 3);
+            Eigen::Matrix3d rot_mtx = storage_plate_.pose.block(0, 0, 3, 3);
+            quat = rot_mtx;
         }
         else if(brick.name().compare("assemble_plate") == 0)
         {
             if(use_config_file)
             {
-                assemble_plate_.x = (*brick)["x"].asDouble();
-                assemble_plate_.y = (*brick)["y"].asDouble();
-                assemble_plate_.z = (*brick)["z"].asDouble();
-                assemble_plate_.roll = (*brick)["roll"].asDouble();
-                assemble_plate_.pitch = (*brick)["pitch"].asDouble();
-                assemble_plate_.yaw = (*brick)["yaw"].asDouble();
-                Eigen::AngleAxisd rollAngle(assemble_plate_.roll, Eigen::Vector3d::UnitX());
-                Eigen::AngleAxisd pitchAngle(assemble_plate_.pitch, Eigen::Vector3d::UnitY());
-                Eigen::AngleAxisd yawAngle(assemble_plate_.yaw, Eigen::Vector3d::UnitZ());
-                assemble_plate_.quat = yawAngle * pitchAngle * rollAngle;
+                double x = (*brick)["x"].asDouble();
+                double y = (*brick)["y"].asDouble();
+                double z = (*brick)["z"].asDouble();
+                double roll = (*brick)["roll"].asDouble();
+                double pitch = (*brick)["pitch"].asDouble();
+                double yaw = (*brick)["yaw"].asDouble();
+                Eigen::AngleAxisd rollAngle(roll, Eigen::Vector3d::UnitX());
+                Eigen::AngleAxisd pitchAngle(pitch, Eigen::Vector3d::UnitY());
+                Eigen::AngleAxisd yawAngle(yaw, Eigen::Vector3d::UnitZ());
+                Eigen::Quaterniond quat = yawAngle * pitchAngle * rollAngle;
                 assemble_plate_.pose = Eigen::Matrix4d::Identity(4, 4);
-                assemble_plate_.pose.block(0, 0, 3, 3) = assemble_plate_.quat.matrix();
-                assemble_plate_.pose.col(3) << assemble_plate_.x, assemble_plate_.y, assemble_plate_.z, 1;
+                assemble_plate_.pose.block(0, 0, 3, 3) = quat.matrix();
+                assemble_plate_.pose.col(3) << x, y, z, 1;
                 assemble_plate_.width = (*brick)["width"].asInt();
                 assemble_plate_.height = (*brick)["height"].asInt();
             }
-            
-            x = assemble_plate_.x;
-            y = assemble_plate_.y;
-            z = assemble_plate_.z;
-            quat = assemble_plate_.quat;
+            assemble_plate_.pose = world_base_frame_ * assemble_plate_.pose;
+            x = assemble_plate_.pose(0, 3);
+            y = assemble_plate_.pose(1, 3);
+            z = assemble_plate_.pose(2, 3);
+            Eigen::Matrix3d rot_mtx = assemble_plate_.pose.block(0, 0, 3, 3);
+            quat = rot_mtx;
         }
         else{
             continue;
@@ -197,15 +201,22 @@ void Lego::brick_dimension_from_name(const std::string& b_name, int& height, int
     width = lego_lib[id]["width"].asInt();
 }
 
+void Lego::set_world_base(const std::string& world_base_fname)
+{
+    ROS_INFO_STREAM("Load World Base from: " << world_base_fname);
+    world_base_frame_ = io::LoadMatFromFile(world_base_fname);
+    world_T_base_inv_ = math::PInv(world_base_frame_);
+}
+
 void Lego::set_robot_base(const std::string& r1_fname, const std::string& r2_fname)
 {
     ROS_INFO_STREAM("Load Robot 1 Base from: " << r1_fname);
-    r1_base_frame_ = io::LoadMatFromFile(r1_fname);
+    r1_base_frame_ = world_base_frame_ * io::LoadMatFromFile(r1_fname);
     r1_T_base_inv_ = r1_base_frame_;
     r1_T_base_inv_ = math::PInv(r1_T_base_inv_);
 
     ROS_INFO_STREAM("Load Robot 2 Base from: " << r2_fname);
-    r2_base_frame_ = io::LoadMatFromFile(r2_fname);
+    r2_base_frame_ = world_base_frame_ * io::LoadMatFromFile(r2_fname);
     r2_T_base_inv_ = r2_base_frame_;
     r2_T_base_inv_ = math::PInv(r2_T_base_inv_);
 }
@@ -313,34 +324,24 @@ void Lego::set_DH_tool_disassemble(const std::string& r1_fname, const std::strin
 
 void Lego::set_assemble_plate_pose(const double& x, const double& y, const double& z, const double& roll, const double& pitch, const double& yaw)
 {
-    assemble_plate_.x = x;
-    assemble_plate_.y = y;
-    assemble_plate_.z = z;
-    assemble_plate_.roll = roll;
-    assemble_plate_.pitch = pitch;
-    assemble_plate_.yaw = yaw;
-    Eigen::AngleAxisd rollAngle(assemble_plate_.roll, Eigen::Vector3d::UnitX());
-    Eigen::AngleAxisd pitchAngle(assemble_plate_.pitch, Eigen::Vector3d::UnitY());
-    Eigen::AngleAxisd yawAngle(assemble_plate_.yaw, Eigen::Vector3d::UnitZ());
-    assemble_plate_.quat = yawAngle * pitchAngle * rollAngle;
-    assemble_plate_.pose.block(0, 0, 3, 3) = assemble_plate_.quat.matrix();
-    assemble_plate_.pose.col(3) << assemble_plate_.x, assemble_plate_.y, assemble_plate_.z, 1;
+    Eigen::AngleAxisd rollAngle(roll, Eigen::Vector3d::UnitX());
+    Eigen::AngleAxisd pitchAngle(pitch, Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd yawAngle(yaw, Eigen::Vector3d::UnitZ());
+    Eigen::Quaterniond quat = yawAngle * pitchAngle * rollAngle;
+    assemble_plate_.pose = Eigen::Matrix4d::Identity(4, 4);
+    assemble_plate_.pose.block(0, 0, 3, 3) = quat.matrix();
+    assemble_plate_.pose.col(3) << x, y, z, 1;
 }
 
 void Lego::set_storage_plate_pose(const double& x, const double& y, const double& z, const double& roll, const double& pitch, const double& yaw)
 {
-    storage_plate_.x = x;
-    storage_plate_.y = y;
-    storage_plate_.z = z;
-    storage_plate_.roll = roll;
-    storage_plate_.pitch = pitch;
-    storage_plate_.yaw = yaw;
-    Eigen::AngleAxisd rollAngle(storage_plate_.roll, Eigen::Vector3d::UnitX());
-    Eigen::AngleAxisd pitchAngle(storage_plate_.pitch, Eigen::Vector3d::UnitY());
-    Eigen::AngleAxisd yawAngle(storage_plate_.yaw, Eigen::Vector3d::UnitZ());
-    storage_plate_.quat = yawAngle * pitchAngle * rollAngle;
-    storage_plate_.pose.block(0, 0, 3, 3) = storage_plate_.quat.matrix();
-    storage_plate_.pose.col(3) << storage_plate_.x, storage_plate_.y, storage_plate_.z, 1;
+    Eigen::AngleAxisd rollAngle(roll, Eigen::Vector3d::UnitX());
+    Eigen::AngleAxisd pitchAngle(pitch, Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd yawAngle(yaw, Eigen::Vector3d::UnitZ());
+    Eigen::Quaterniond quat = yawAngle * pitchAngle * rollAngle;
+    storage_plate_.pose = Eigen::Matrix4d::Identity(4, 4);
+    storage_plate_.pose.block(0, 0, 3, 3) = quat.matrix();
+    storage_plate_.pose.col(3) << x, y, z, 1;
 }
 
 void Lego::calc_brick_loc(const lego_brick& brick, const lego_plate& plate, const int& orientation,
