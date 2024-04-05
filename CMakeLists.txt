@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 14)
 project(lego_manipulation VERSION 1.0.0 LANGUAGES CXX)
 
+# Option to enable RealSense support
+option(ENABLE_REALSENSE "Enable RealSense support" OFF)
+
 # /* -------------------------------------------------------------------------- */
 # /*                              Build Properties                              */
 # /* -------------------------------------------------------------------------- */
@@ -14,8 +17,10 @@ add_definitions(-D_OS_UNIX)
 # /* -------------------------------------------------------------------------- */
 
 find_package(Eigen3 3.3.7 REQUIRED)
-find_package(OpenCV REQUIRED )
-find_package(realsense2 REQUIRED)
+find_package(OpenCV REQUIRED)
+if(ENABLE_REALSENSE)
+  find_package(realsense2 REQUIRED)
+endif()
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
@@ -45,11 +50,13 @@ add_library(${PROJECT_NAME} SHARED ${src_files})
 
 target_link_libraries(${PROJECT_NAME}
     Eigen3::Eigen
-    realsense2
     ${OpenCV_LIBRARIES}
     ${catkin_LIBRARIES}
     jsoncpp
 )
+if(ENABLE_REALSENSE)
+  target_link_libraries(${PROJECT_NAME} realsense2)
+endif()
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -77,23 +84,19 @@ catkin_package(
   # yk_api
 )
 
-include_directories(
-  include
-  ${OpenCV_INCLUDE_DIRS}
-  ${catkin_INCLUDE_DIRS}
-)
-
 # /* -------------------------------------------------------------------------- */
 # /*                             Testing Executables                            */
 # /* -------------------------------------------------------------------------- */
 
-add_executable(${PROJECT_NAME}_realsense
-  src/ros_nodes/realsense_node.cpp
-)
-target_link_libraries(${PROJECT_NAME}_realsense
-    ${PROJECT_NAME}
-    ${catkin_LIBRARIES}
-)
+if(ENABLE_REALSENSE)
+  add_executable(${PROJECT_NAME}_realsense
+    src/ros_nodes/realsense_node.cpp
+  )
+  target_link_libraries(${PROJECT_NAME}_realsense
+      ${PROJECT_NAME}
+      ${catkin_LIBRARIES}
+  )
+endif()
 
 add_executable(${PROJECT_NAME}_fts
   src/ros_nodes/fts_node.cpp

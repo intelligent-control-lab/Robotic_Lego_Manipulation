@@ -366,7 +366,7 @@ int main(int argc, char **argv)
                     up_T = cart_T * up_T;
                     r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, up_T.block(0, 3, 3, 1), up_T.block(0, 0, 3, 3),
                                                             lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), 0, 10e6, 10e-4*5);
-                    if(task_idx > 7)
+                    if(task_idx > 2)
                     {
                         use_r2 = 1;
                         support_T(0, 3) = cart_T(0, 3);
