@@ -355,7 +355,20 @@ int main(int argc, char **argv)
                     offset_T = cart_T * offset_T;
                     r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, offset_T.block(0, 3, 3, 1), offset_T.block(0, 0, 3, 3),
                                                             lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), 0, 10e6, 10e-4*5);
-                    use_r2 = 0;
+                    if(task_idx > 2)
+                    {
+                        use_r2 = 1;
+                        r2_cur_T = lego_manipulation::math::FK(r2_cur_goal, lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), false);
+                        support_T(0, 3) = r2_cur_T(0, 3);
+                        support_T(1, 3) = r2_cur_T(0, 3);
+                        support_T(2, 3) = cart_T(2, 3) - 2 * lego_ptr->brick_height() - 0.0078;
+
+                        Eigen::MatrixXd init_q(lego_ptr->robot_dof_2(), 1);
+                        init_q = home_q;
+                        init_q(4) = 30;
+                        r2_cur_goal = lego_manipulation::math::IK(init_q, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
+                                                                lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e5, 10e-4);
+                    }
                     // cur_goal =  lego_manipulation::math::IK_closed_form(cur_goal, offset_T, lego_ptr->robot_DH_tool(), 
                     //                                                     lego_ptr->robot_base_inv(), lego_ptr->robot_tool_inv(),0,IK_status);
                 }
@@ -370,7 +383,7 @@ int main(int argc, char **argv)
                     {
                         use_r2 = 1;
                         support_T(0, 3) = cart_T(0, 3);
-                        support_T(1, 3) = cart_T(1, 3) - 2 * 0.008 - 0.0002;
+                        support_T(1, 3) = cart_T(1, 3) - 1 * 0.008 - 0.0002;
                         support_T(2, 3) = cart_T(2, 3) - 2 * lego_ptr->brick_height() - 0.0078;
 
                         Eigen::MatrixXd init_q(lego_ptr->robot_dof_2(), 1);
