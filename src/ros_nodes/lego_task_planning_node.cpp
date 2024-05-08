@@ -342,9 +342,10 @@ int main(int argc, char **argv)
                     if(mode == 11 && task_idx > 2)
                     {
                         use_r2 = 1;
-                        support_T(0, 3) = cart_T(0, 3);
-                        support_T(1, 3) = cart_T(1, 3) - 2 * 0.008 - 0.0002;
-                        support_T(2, 3) = cart_T(2, 3) - 2 * lego_ptr->brick_height() - 0.0078;
+                        Eigen::MatrixXd r2_T = lego_manipulation::math::FK(r2_cur_goal, lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), false);
+                        support_T(0, 3) = r2_T(0, 3);
+                        support_T(1, 3) = r2_T(1, 3) - 2 * 0.008 - 0.0002;
+                        support_T(2, 3) = r2_T(2, 3);
 
                         Eigen::MatrixXd init_q(lego_ptr->robot_dof_2(), 1);
                         init_q = home_q;
