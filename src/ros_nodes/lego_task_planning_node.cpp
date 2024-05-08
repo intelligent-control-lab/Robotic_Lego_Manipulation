@@ -339,6 +339,19 @@ int main(int argc, char **argv)
                     use_r2 = 0;
                     // cur_goal =  lego_manipulation::math::IK_closed_form(cur_goal, cart_T, lego_ptr->robot_DH_tool_assemble(), 
                     //                                                     lego_ptr->robot_base_inv(), lego_ptr->robot_tool_assemble_inv(),0,IK_status);
+                    if(mode == 11 && task_idx > 2)
+                    {
+                        use_r2 = 1;
+                        support_T(0, 3) = cart_T(0, 3);
+                        support_T(1, 3) = cart_T(1, 3) - 2 * 0.008 - 0.0002;
+                        support_T(2, 3) = cart_T(2, 3) - 2 * lego_ptr->brick_height() - 0.0078;
+
+                        Eigen::MatrixXd init_q(lego_ptr->robot_dof_2(), 1);
+                        init_q = home_q;
+                        init_q(4) = 30;
+                        r2_cur_goal = lego_manipulation::math::IK(init_q, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
+                                                                lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e5, 10e-4);
+                    }
                 }
                 else if(mode == 7)
                 {
