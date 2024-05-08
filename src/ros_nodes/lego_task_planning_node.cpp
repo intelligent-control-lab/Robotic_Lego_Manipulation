@@ -383,7 +383,7 @@ int main(int argc, char **argv)
                         use_r2 = 1;
                         support_T(0, 3) = cart_T(0, 3);
                         support_T(1, 3) = cart_T(1, 3) - 1 * 0.008 - 0.0002;
-                        support_T(2, 3) = cart_T(2, 3) - 2 * lego_ptr->brick_height() - 0.0078;
+                        support_T(2, 3) = cart_T(2, 3) - 2 * lego_ptr->brick_height() - 0.0065;
 
                         Eigen::MatrixXd init_q(lego_ptr->robot_dof_2(), 1);
                         init_q = home_q;
