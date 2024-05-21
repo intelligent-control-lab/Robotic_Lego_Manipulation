@@ -7,7 +7,9 @@
         "brick_id":2,
         "brick_seq":6,
         "ori":0,
-        "press_side":1
+        "press_side":1,
+        "robot_id":1,
+        "sup_robot_id":0
     },
     "2":
     {
@@ -17,7 +19,9 @@
         "brick_id":2,
         "brick_seq":7,
         "ori":0,
-        "press_side":2
+        "press_side":2,
+        "robot_id":1,
+        "sup_robot_id":0
     },
     "3":
     {
@@ -27,7 +31,9 @@
         "brick_id":2,
         "brick_seq":8,
         "ori":0,
-        "press_side":2
+        "press_side":2,
+        "robot_id":1,
+        "sup_robot_id":2
     },
     "4":
     {
@@ -37,6 +43,8 @@
         "brick_id":2,
         "brick_seq":9,
         "ori":0,
-        "press_side":2
+        "press_side":2,
+        "robot_id":1,
+        "sup_robot_id":2
     }
 }

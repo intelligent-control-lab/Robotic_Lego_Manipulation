@@ -1,5 +1,8 @@
 <launch>
-    <node name="lego_manipulation_task_planning" pkg="lego_manipulation" type="lego_manipulation_task_planning" output="screen" required="true">
+    <include file="$(find robot_digital_twin)/launch/dual_gp4.launch"/>
+    <include file="$(find stmotion_controller)/launch/r1_controller_node.launch"/>
+    <include file="$(find stmotion_controller)/launch/r2_controller_node.launch"/>
+    <node name="lego_manipulation_task_planning" pkg="lego_manipulation" type="lego_manipulation_task_planning" output="screen" required="true" launch-prefix="bash -c 'sleep 10; $0 $@'">
         <param name="config_fname" value="$(find lego_manipulation)/config/user_config.json"/>
         <param name="root_pwd" value="$(find lego_manipulation)/"/>
     </node>

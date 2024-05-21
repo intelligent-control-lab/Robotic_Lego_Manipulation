@@ -159,6 +159,8 @@ int main(int argc, char **argv)
         int mode = 0; // 0:home 1:pick tilt up 2:pick_up 3:pick_down, 4:pick_twist 5:pick_twist_up 6:home
                       // 7:drop tilt up 8:drop_up 9:drop_down 10:drop_twist 11:drop_twist_up 12:done
         int task_idx;
+        int robot_id = 0;
+        int support = 0;
         if(assemble)
         {
             task_idx = 1;
@@ -179,7 +181,12 @@ int main(int argc, char **argv)
         {
             if (mode >= 4 && mode <= 9)
             {
-                lego_ptr->update_bricks(robot1_q, lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), false, brick_name);
+                if (robot_id == 1) {
+                    lego_ptr->update_bricks(robot1_q, lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), false, brick_name);
+                }
+                if (robot_id == 2) {
+                    lego_ptr->update_bricks(robot2_q, lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), false, brick_name);
+                }
             }
             if((use_yk && move_on_to_next) || 
                (!use_yk && lego_ptr->robot_reached_goal(robot1_q, r1_cur_goal, lego_ptr->robot_dof_1()) && lego_ptr->robot_is_static(robot1_qd, robot1_qdd, lego_ptr->robot_dof_1()) && 
@@ -249,7 +256,11 @@ int main(int argc, char **argv)
                 r2_controller_time_msg.data = 2;
                 r2_controller_time_pub.publish(r2_controller_time_msg);
                 
-                ROS_INFO_STREAM("Mode: " << mode << " Task: " << task_idx);
+                auto cur_graph_node = task_json[std::to_string(task_idx)];
+                robot_id = cur_graph_node["robot_id"].asInt();
+                support = cur_graph_node["sup_robot_id"].asInt();
+                
+                ROS_INFO_STREAM("Mode: " << mode << " Task: " << task_idx << " Robot: " << robot_id << " Support: " << support);
 
                 if (mode == 0 || mode == 6 || mode == 12)
                 {
@@ -272,13 +283,28 @@ int main(int argc, char **argv)
                     Eigen::Matrix4d offset_T = Eigen::MatrixXd::Identity(4, 4);
                     offset_T.col(3) << pick_offset(3), pick_offset(4), pick_offset(5) - abs(pick_offset(5)), 1;
                     offset_T = cart_T * offset_T;
-                    r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, offset_T.block(0, 3, 3, 1), offset_T.block(0, 0, 3, 3),
+
+                    if (robot_id == 1) {
+                        use_r1 = 1;
+                        use_r2 = 0;
+                        r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, offset_T.block(0, 3, 3, 1), offset_T.block(0, 0, 3, 3),
                                                             lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), 0, 10e6, 10e-4*5);
-                    use_r2 = 0;
-                    if(!assemble && lego_ptr->brick_instock(brick_name))
-                    {
-                        r1_cur_goal = home_q;
-                        mode = 12;
+                        if(!assemble && lego_ptr->brick_instock(brick_name))
+                        {
+                            r1_cur_goal = home_q;
+                            mode = 12;
+                        }
+                    }
+                    if (robot_id == 2) {
+                        use_r2 = 1;
+                        use_r1 = 0;
+                        r2_cur_goal = lego_manipulation::math::IK(r2_cur_goal, offset_T.block(0, 3, 3, 1), offset_T.block(0, 0, 3, 3),
+                                                            lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e6, 10e-4*5);
+                        if (!assemble && lego_ptr->brick_instock(brick_name))
+                        {
+                            r2_cur_goal = home_q;
+                            mode = 12;
+                        }
                     }
                 }
                 else if (mode == 2)
@@ -286,8 +312,14 @@ int main(int argc, char **argv)
                     Eigen::Matrix4d up_T = Eigen::MatrixXd::Identity(4, 4);
                     up_T.col(3) << 0, 0, pick_offset(5), 1;
                     up_T = cart_T * up_T;
-                    r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, up_T.block(0, 3, 3, 1), up_T.block(0, 0, 3, 3),
+                    if (use_r1) {
+                        r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, up_T.block(0, 3, 3, 1), up_T.block(0, 0, 3, 3),
                                                             lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), 0, 10e6, 10e-4*5);
+                    }
+                    if (use_r2) {
+                        r2_cur_goal = lego_manipulation::math::IK(r2_cur_goal, up_T.block(0, 3, 3, 1), up_T.block(0, 0, 3, 3),
+                                                            lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e6, 10e-4*5);
+                    }
                     
                     // if(0)//task_idx >= 3)
                     // {
@@ -308,9 +340,14 @@ int main(int argc, char **argv)
                 }
                 else if (mode == 3)
                 {
-                    r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, cart_T.block(0, 3, 3, 1), cart_T.block(0, 0, 3, 3),
+                    if (use_r1) {
+                        r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, cart_T.block(0, 3, 3, 1), cart_T.block(0, 0, 3, 3),
                                                             lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), 0, 10e6, 10e-4*5);
-                    use_r2 = 0;
+                    }
+                    if (use_r2) {
+                        r2_cur_goal = lego_manipulation::math::IK(r2_cur_goal, cart_T.block(0, 3, 3, 1), cart_T.block(0, 0, 3, 3),
+                                                            lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e6, 10e-4*5);
+                    }
                     // cur_goal =  lego_manipulation::math::IK_closed_form(cur_goal, cart_T, lego_ptr->robot_DH_tool(), 
                     //                                                     lego_ptr->robot_base_inv(), lego_ptr->robot_tool_inv(), 0, IK_status);
                 }
@@ -322,36 +359,65 @@ int main(int argc, char **argv)
                                -sin(twist_rad), 0, cos(twist_rad);
                     twist_T = Eigen::MatrixXd::Identity(4, 4);
                     twist_T.block(0, 0, 3, 3) << twist_R;
-                    cart_T = lego_manipulation::math::FK(r1_cur_goal, lego_ptr->robot_DH_tool_disassemble_r1(), lego_ptr->robot_base_r1(), false);
-                    cart_T = cart_T * twist_T;
-                    r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, cart_T.block(0, 3, 3, 1), cart_T.block(0, 0, 3, 3),
+                    if (use_r1) {
+                        cart_T = lego_manipulation::math::FK(r1_cur_goal, lego_ptr->robot_DH_tool_disassemble_r1(), lego_ptr->robot_base_r1(), false);
+                        cart_T = cart_T * twist_T;
+                        r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, cart_T.block(0, 3, 3, 1), cart_T.block(0, 0, 3, 3),
                                                             lego_ptr->robot_DH_tool_disassemble_r1(), lego_ptr->robot_base_r1(), 0, 10e6, 10e-4*5);
-                    use_r2 = 0;
+                    }
+                    if (use_r2) {
+                        cart_T = lego_manipulation::math::FK(r2_cur_goal, lego_ptr->robot_DH_tool_disassemble_r2(), lego_ptr->robot_base_r2(), false);
+                        cart_T = cart_T * twist_T;
+                        r2_cur_goal = lego_manipulation::math::IK(r2_cur_goal, cart_T.block(0, 3, 3, 1), cart_T.block(0, 0, 3, 3),
+                                                            lego_ptr->robot_DH_tool_disassemble_r2(), lego_ptr->robot_base_r2(), 0, 10e6, 10e-4*5);
+                    }
                     // cur_goal =  lego_manipulation::math::IK_closed_form(cur_goal, cart_T, lego_ptr->robot_DH_tool_disassemble(), 
                     //                                                     lego_ptr->robot_base_inv(), lego_ptr->robot_tool_disassemble_inv(),0,IK_status);
                 }
                 else if(mode == 5 || mode == 11)
                 {
-                    cart_T = lego_manipulation::math::FK(r1_cur_goal, lego_ptr->robot_DH_tool_assemble_r1(), lego_ptr->robot_base_r1(), false);
-                    cart_T(2, 3) = cart_T(2, 3) + 0.015;
-                    r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, cart_T.block(0, 3, 3, 1), cart_T.block(0, 0, 3, 3),
-                                                            lego_ptr->robot_DH_tool_assemble_r1(), lego_ptr->robot_base_r1(), 0, 10e6, 10e-4*5);
-                    use_r2 = 0;
+                    if (use_r1) {
+                        cart_T = lego_manipulation::math::FK(r1_cur_goal, lego_ptr->robot_DH_tool_assemble_r1(), lego_ptr->robot_base_r1(), false);
+                        cart_T(2, 3) = cart_T(2, 3) + 0.015;
+                        r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, cart_T.block(0, 3, 3, 1), cart_T.block(0, 0, 3, 3),
+                                                                lego_ptr->robot_DH_tool_assemble_r1(), lego_ptr->robot_base_r1(), 0, 10e6, 10e-4*5);
+                    }
+                    if (use_r2) {
+                        cart_T = lego_manipulation::math::FK(r2_cur_goal, lego_ptr->robot_DH_tool_assemble_r2(), lego_ptr->robot_base_r2(), false);
+                        cart_T(2, 3) = cart_T(2, 3) + 0.015;
+                        r2_cur_goal = lego_manipulation::math::IK(r2_cur_goal, cart_T.block(0, 3, 3, 1), cart_T.block(0, 0, 3, 3),
+                                                                lego_ptr->robot_DH_tool_assemble_r2(), lego_ptr->robot_base_r2(), 0, 10e6, 10e-4*5);
+                    }
                     // cur_goal =  lego_manipulation::math::IK_closed_form(cur_goal, cart_T, lego_ptr->robot_DH_tool_assemble(), 
                     //                                                     lego_ptr->robot_base_inv(), lego_ptr->robot_tool_assemble_inv(),0,IK_status);
-                    if(mode == 11 && task_idx > 2)
+                    if(mode == 11 && support > 0)
                     {
-                        use_r2 = 1;
-                        Eigen::MatrixXd r2_T = lego_manipulation::math::FK(r2_cur_goal, lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), false);
-                        support_T(0, 3) = r2_T(0, 3);
-                        support_T(1, 3) = r2_T(1, 3) - 2 * 0.008 - 0.0002;
-                        support_T(2, 3) = r2_T(2, 3);
+                        if (support == 2) {
+                            use_r2 = 1;
+                            Eigen::MatrixXd r2_T = lego_manipulation::math::FK(r2_cur_goal, lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), false);
+                            support_T(0, 3) = r2_T(0, 3);
+                            support_T(1, 3) = r2_T(1, 3) - 2 * 0.008 - 0.0002;
+                            support_T(2, 3) = r2_T(2, 3);
 
-                        Eigen::MatrixXd init_q(lego_ptr->robot_dof_2(), 1);
-                        init_q = home_q;
-                        init_q(4) = 30;
-                        r2_cur_goal = lego_manipulation::math::IK(init_q, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
-                                                                lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e5, 10e-4);
+                            Eigen::MatrixXd init_q(lego_ptr->robot_dof_2(), 1);
+                            init_q = home_q;
+                            init_q(4) = 30;
+                            r2_cur_goal = lego_manipulation::math::IK(init_q, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
+                                                                    lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e5, 10e-4);
+                        }
+                        if (support == 1) {
+                            use_r1 = 1;
+                            Eigen::MatrixXd r1_T = lego_manipulation::math::FK(r1_cur_goal, lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), false);
+                            support_T(0, 3) = r1_T(0, 3);
+                            support_T(1, 3) = r1_T(1, 3) - 2 * 0.008 - 0.0002;
+                            support_T(2, 3) = r1_T(2, 3);
+
+                            Eigen::MatrixXd init_q(lego_ptr->robot_dof_1(), 1);
+                            init_q = home_q;
+                            init_q(4) = 30;
+                            r1_cur_goal = lego_manipulation::math::IK(init_q, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
+                                                                    lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), 0, 10e5, 10e-4);
+                        }
                     }
                 }
                 else if(mode == 7)
@@ -367,20 +433,43 @@ int main(int argc, char **argv)
                     Eigen::Matrix4d offset_T = Eigen::MatrixXd::Identity(4, 4);
                     offset_T.col(3) << pick_offset(0), pick_offset(1), pick_offset(2) - abs(pick_offset(2)), 1;
                     offset_T = cart_T * offset_T;
-                    r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, offset_T.block(0, 3, 3, 1), offset_T.block(0, 0, 3, 3),
-                                                            lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), 0, 10e6, 10e-4*5);
-                    if(task_idx > 2)
-                    {
-                        use_r2 = 1;
-                        support_T(0, 3) = cart_T(0, 3);
-                        support_T(1, 3) = cart_T(1, 3) - 2 * 0.008 - 0.0002;
-                        support_T(2, 3) = cart_T(2, 3) - 2 * lego_ptr->brick_height() - 0.0078;
 
-                        Eigen::MatrixXd init_q(lego_ptr->robot_dof_2(), 1);
-                        init_q = home_q;
-                        init_q(4) = 30;
-                        r2_cur_goal = lego_manipulation::math::IK(init_q, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
-                                                                lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e5, 10e-4);
+                    if (robot_id == 1) {
+                        use_r1 = 1;
+                        r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, offset_T.block(0, 3, 3, 1), offset_T.block(0, 0, 3, 3),
+                                                            lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), 0, 10e6, 10e-4*5);
+                    }
+                    if (robot_id == 2) {
+                        use_r2 = 1;
+                        r2_cur_goal = lego_manipulation::math::IK(r2_cur_goal, offset_T.block(0, 3, 3, 1), offset_T.block(0, 0, 3, 3),
+                                                            lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e6, 10e-4*5);
+                    }
+                    if(support > 0)
+                    {
+                        if (support == 2) {
+                            use_r2 = 1;
+                            support_T(0, 3) = cart_T(0, 3);
+                            support_T(1, 3) = cart_T(1, 3) - 2 * 0.008 - 0.0002;
+                            support_T(2, 3) = cart_T(2, 3) - 2 * lego_ptr->brick_height() - 0.0078;
+
+                            Eigen::MatrixXd init_q(lego_ptr->robot_dof_2(), 1);
+                            init_q = home_q;
+                            init_q(4) = 30;
+                            r2_cur_goal = lego_manipulation::math::IK(init_q, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
+                                                                    lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e5, 10e-4);
+                        }
+                        if (support == 1) {
+                            use_r1 = 1;
+                            support_T(0, 3) = cart_T(0, 3);
+                            support_T(1, 3) = cart_T(1, 3) - 2 * 0.008 - 0.0002;
+                            support_T(2, 3) = cart_T(2, 3) - 2 * lego_ptr->brick_height() - 0.0078;
+
+                            Eigen::MatrixXd init_q(lego_ptr->robot_dof_1(), 1);
+                            init_q = home_q;
+                            init_q(4) = 30;
+                            r1_cur_goal = lego_manipulation::math::IK(init_q, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
+                                                                    lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), 0, 10e5, 10e-4);
+                        }
                     }
                     // cur_goal =  lego_manipulation::math::IK_closed_form(cur_goal, offset_T, lego_ptr->robot_DH_tool(), 
                     //                                                     lego_ptr->robot_base_inv(), lego_ptr->robot_tool_inv(),0,IK_status);
@@ -390,20 +479,43 @@ int main(int argc, char **argv)
                     Eigen::Matrix4d up_T = Eigen::MatrixXd::Identity(4, 4);
                     up_T.col(3) << 0, 0, pick_offset(2), 1;
                     up_T = cart_T * up_T;
-                    r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, up_T.block(0, 3, 3, 1), up_T.block(0, 0, 3, 3),
-                                                            lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), 0, 10e6, 10e-4*5);
-                    if(task_idx > 2)
-                    {
-                        use_r2 = 1;
-                        support_T(0, 3) = cart_T(0, 3);
-                        support_T(1, 3) = cart_T(1, 3) - 1 * 0.008 - 0.0002;
-                        support_T(2, 3) = cart_T(2, 3) - 2 * lego_ptr->brick_height() - 0.0065;
 
-                        Eigen::MatrixXd init_q(lego_ptr->robot_dof_2(), 1);
-                        init_q = home_q;
-                        init_q(4) = 30;
-                        r2_cur_goal = lego_manipulation::math::IK(init_q, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
-                                                                lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e5, 10e-4);
+                    if (robot_id == 1) {
+                        use_r1 = 1;
+                        r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, up_T.block(0, 3, 3, 1), up_T.block(0, 0, 3, 3),
+                                                            lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), 0, 10e6, 10e-4*5);
+                    }
+                    if (robot_id == 2) {
+                        use_r2 = 1;
+                        r2_cur_goal = lego_manipulation::math::IK(r2_cur_goal, up_T.block(0, 3, 3, 1), up_T.block(0, 0, 3, 3),
+                                                            lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e6, 10e-4*5);
+                    }
+                    if(support > 0)
+                    {
+                        if (support == 2) {
+                            use_r2 = 1;
+                            support_T(0, 3) = cart_T(0, 3);
+                            support_T(1, 3) = cart_T(1, 3) - 1 * 0.008 - 0.0002;
+                            support_T(2, 3) = cart_T(2, 3) - 2 * lego_ptr->brick_height() - 0.0065;
+
+                            Eigen::MatrixXd init_q(lego_ptr->robot_dof_2(), 1);
+                            init_q = home_q;
+                            init_q(4) = 30;
+                            r2_cur_goal = lego_manipulation::math::IK(init_q, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
+                                                                    lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e5, 10e-4);
+                        }
+                        if (support == 1) {
+                            use_r1 = 1;
+                            support_T(0, 3) = cart_T(0, 3);
+                            support_T(1, 3) = cart_T(1, 3) - 1 * 0.008 - 0.0002;
+                            support_T(2, 3) = cart_T(2, 3) - 2 * lego_ptr->brick_height() - 0.0065;
+
+                            Eigen::MatrixXd init_q(lego_ptr->robot_dof_1(), 1);
+                            init_q = home_q;
+                            init_q(4) = 30;
+                            r1_cur_goal = lego_manipulation::math::IK(init_q, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
+                                                                    lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), 0, 10e5, 10e-4);
+                        }
                     }
                     
                     // cur_goal =  lego_manipulation::math::IK_closed_form(cur_goal, up_T, lego_ptr->robot_DH_tool(), 
@@ -411,9 +523,18 @@ int main(int argc, char **argv)
                 }
                 else if(mode == 9)
                 {
-                    r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, cart_T.block(0, 3, 3, 1), cart_T.block(0, 0, 3, 3),
+                    if (robot_id == 1) {
+                        use_r1 = 1;
+                        r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, cart_T.block(0, 3, 3, 1), cart_T.block(0, 0, 3, 3),
                                                             lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), 0, 10e6, 10e-4*5);
-                    use_r2 = 0;
+                        use_r2 = 0;
+                    }
+                    if (robot_id == 2) {
+                        use_r2 = 1;
+                        r2_cur_goal = lego_manipulation::math::IK(r2_cur_goal, cart_T.block(0, 3, 3, 1), cart_T.block(0, 0, 3, 3),
+                                                            lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e6, 10e-4*5);
+                        use_r1 = 0;
+                    }
                     // cur_goal =  lego_manipulation::math::IK_closed_form(cur_goal, cart_T, lego_ptr->robot_DH_tool(), 
                     //                                                     lego_ptr->robot_base_inv(), lego_ptr->robot_tool_inv(),0,IK_status);
                 }
@@ -425,10 +546,19 @@ int main(int argc, char **argv)
                                -sin(-twist_rad), 0, cos(-twist_rad);
                     twist_T = Eigen::MatrixXd::Identity(4, 4);
                     twist_T.block(0, 0, 3, 3) << twist_R;
-                    cart_T = lego_manipulation::math::FK(r1_cur_goal, lego_ptr->robot_DH_tool_assemble_r1(), lego_ptr->robot_base_r1(), false);
-                    cart_T = cart_T * twist_T;
-                    r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, cart_T.block(0, 3, 3, 1), cart_T.block(0, 0, 3, 3),
+
+                    if (use_r1) {
+                        cart_T = lego_manipulation::math::FK(r1_cur_goal, lego_ptr->robot_DH_tool_assemble_r1(), lego_ptr->robot_base_r1(), false);
+                        cart_T = cart_T * twist_T;
+                        r1_cur_goal = lego_manipulation::math::IK(r1_cur_goal, cart_T.block(0, 3, 3, 1), cart_T.block(0, 0, 3, 3),
                                                             lego_ptr->robot_DH_tool_assemble_r1(), lego_ptr->robot_base_r1(), 0, 10e6, 10e-4*5);
+                    }
+                    if (use_r2) {
+                        cart_T = lego_manipulation::math::FK(r2_cur_goal, lego_ptr->robot_DH_tool_assemble_r2(), lego_ptr->robot_base_r2(), false);
+                        cart_T = cart_T * twist_T;
+                        r2_cur_goal = lego_manipulation::math::IK(r2_cur_goal, cart_T.block(0, 3, 3, 1), cart_T.block(0, 0, 3, 3),
+                                                            lego_ptr->robot_DH_tool_assemble_r2(), lego_ptr->robot_base_r2(), 0, 10e6, 10e-4*5);
+                    }
                     // cur_goal =  lego_manipulation::math::IK_closed_form(cur_goal, cart_T, lego_ptr->robot_DH_tool_assemble(), 
                     //                                                     lego_ptr->robot_base_inv(), lego_ptr->robot_tool_assemble_inv(),0,IK_status);
                 }
