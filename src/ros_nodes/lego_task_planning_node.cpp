@@ -253,7 +253,7 @@ int main(int argc, char **argv)
                 // Modify stmotion controller runtime
                 r1_controller_time_msg.data = 0.5;
                 r1_controller_time_pub.publish(r1_controller_time_msg);
-                r2_controller_time_msg.data = 2;
+                r2_controller_time_msg.data = 0.5;
                 r2_controller_time_pub.publish(r2_controller_time_msg);
                 
                 auto cur_graph_node = task_json[std::to_string(task_idx)];
