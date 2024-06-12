@@ -138,16 +138,23 @@ int main(int argc, char **argv)
         home_T.col(3) << 0.2, 0, 0.4, 1; // Home X, Y, Z in base frame of the Flange
         home_T = lego_ptr->world_base_frame() * home_T;
 
-        Eigen::Matrix4d y_n90, z_180;
+        Eigen::Matrix4d y_n90, y_s90, z_180;
         y_n90 << 0, 0, -1, 0, 
                 0, 1, 0, 0,
                 1, 0, 0, 0,
+                0, 0, 0, 1;
+        y_s90 << 0, 0, 1, 0,
+                0, 1, 0, 0,
+                -1, 0, 0, 0,
                 0, 0, 0, 1;
         z_180 << -1, 0, 0, 0,
                  0, -1, 0, 0,
                  0, 0, 1, 0,
                  0, 0, 0, 1;
-        Eigen::Matrix4d support_T = home_T * y_n90 * z_180;
+        Eigen::MatrixXd support_T2 = home_T * y_n90 * z_180;
+        Eigen::MatrixXd support_pre_T2 = home_T * y_n90 * z_180;
+        Eigen::MatrixXd support_T1 = home_T * y_s90;
+        Eigen::MatrixXd support_pre_T1 = home_T * y_s90;
         home_q = lego_manipulation::math::IK(home_q, home_T.block(0, 3, 3, 1), home_T.block(0, 0, 3, 3),
                                              lego_ptr->robot_DH_r1(), lego_ptr->robot_base_r1(), 0, 10e6, 10e-4*5); // Home
         lego_manipulation::math::VectorJd pick_offset = Eigen::MatrixXd::Zero(6, 1);
@@ -324,15 +331,15 @@ int main(int argc, char **argv)
                     // if(0)//task_idx >= 3)
                     // {
                     //     use_r2 = 1;
-                    //     Eigen::Matrix4d support_T = cart_T;
+                    //     Eigen::Matrix4d support_T2 = cart_T;
                     //     Eigen::Matrix4d y_90;
                     //     y_90 << 0, 0, 1, 0, 
                     //             0, 1, 0, 0,
                     //             -1, 0, 0, 0,
                     //             0, 0, 0, 1;
-                    //     support_T(2, 3) = support_T(2, 3) - lego_ptr->brick_height();
-                    //     support_T = support_T * y_90; 
-                    //     r2_cur_goal = lego_manipulation::math::IK(r2_cur_goal, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
+                    //     support_T2(2, 3) = support_T2(2, 3) - lego_ptr->brick_height();
+                    //     support_T2 = support_T2 * y_90; 
+                    //     r2_cur_goal = lego_manipulation::math::IK(r2_cur_goal, support_T2.block(0, 3, 3, 1), support_T2.block(0, 0, 3, 3),
                     //                                             lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e6, 10e-4*5);
                     // }
                     
@@ -394,28 +401,19 @@ int main(int argc, char **argv)
                     {
                         if (support == 2) {
                             use_r2 = 1;
-                            Eigen::MatrixXd r2_T = lego_manipulation::math::FK(r2_cur_goal, lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), false);
-                            support_T(0, 3) = r2_T(0, 3);
-                            support_T(1, 3) = r2_T(1, 3) - 2 * 0.008 - 0.0002;
-                            support_T(2, 3) = r2_T(2, 3);
-
                             Eigen::MatrixXd init_q(lego_ptr->robot_dof_2(), 1);
                             init_q = home_q;
                             init_q(4) = 30;
-                            r2_cur_goal = lego_manipulation::math::IK(init_q, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
+                            r2_cur_goal = lego_manipulation::math::IK(init_q, support_pre_T2.block(0, 3, 3, 1), support_pre_T2.block(0, 0, 3, 3),
                                                                     lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e5, 10e-4);
                         }
                         if (support == 1) {
                             use_r1 = 1;
-                            Eigen::MatrixXd r1_T = lego_manipulation::math::FK(r1_cur_goal, lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), false);
-                            support_T(0, 3) = r1_T(0, 3);
-                            support_T(1, 3) = r1_T(1, 3) - 2 * 0.008 - 0.0002;
-                            support_T(2, 3) = r1_T(2, 3);
 
                             Eigen::MatrixXd init_q(lego_ptr->robot_dof_1(), 1);
                             init_q = home_q;
                             init_q(4) = 30;
-                            r1_cur_goal = lego_manipulation::math::IK(init_q, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
+                            r1_cur_goal = lego_manipulation::math::IK(init_q, support_pre_T1.block(0, 3, 3, 1), support_pre_T1.block(0, 0, 3, 3),
                                                                     lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), 0, 10e5, 10e-4);
                         }
                     }
@@ -448,26 +446,22 @@ int main(int argc, char **argv)
                     {
                         if (support == 2) {
                             use_r2 = 1;
-                            support_T(0, 3) = cart_T(0, 3);
-                            support_T(1, 3) = cart_T(1, 3) - 3 * 0.008 - 0.0002;
-                            support_T(2, 3) = cart_T(2, 3) - 2 * lego_ptr->brick_height() - 0.0078;
+                            lego_ptr->calc_brick_sup_pose(brick_name, cart_T, cur_graph_node["sup_side"].asInt(), true, support_pre_T2);
 
                             Eigen::MatrixXd init_q(lego_ptr->robot_dof_2(), 1);
                             init_q = home_q;
                             init_q(4) = 30;
-                            r2_cur_goal = lego_manipulation::math::IK(init_q, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
+                            r2_cur_goal = lego_manipulation::math::IK(init_q, support_pre_T2.block(0, 3, 3, 1), support_pre_T2.block(0, 0, 3, 3),
                                                                     lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e5, 10e-4);
                         }
                         if (support == 1) {
                             use_r1 = 1;
-                            support_T(0, 3) = cart_T(0, 3);
-                            support_T(1, 3) = cart_T(1, 3) - 3 * 0.008 - 0.0002;
-                            support_T(2, 3) = cart_T(2, 3) - 2 * lego_ptr->brick_height() - 0.0078;
+                            lego_ptr->calc_brick_sup_pose(brick_name, cart_T, cur_graph_node["sup_side"].asInt(), true, support_pre_T1);
 
                             Eigen::MatrixXd init_q(lego_ptr->robot_dof_1(), 1);
                             init_q = home_q;
                             init_q(4) = 30;
-                            r1_cur_goal = lego_manipulation::math::IK(init_q, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
+                            r1_cur_goal = lego_manipulation::math::IK(init_q, support_pre_T1.block(0, 3, 3, 1), support_pre_T1.block(0, 0, 3, 3),
                                                                     lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), 0, 10e5, 10e-4);
                         }
                     }
@@ -494,26 +488,21 @@ int main(int argc, char **argv)
                     {
                         if (support == 2) {
                             use_r2 = 1;
-                            support_T(0, 3) = cart_T(0, 3);
-                            support_T(1, 3) = cart_T(1, 3) - 1 * 0.008 - 0.0002;
-                            support_T(2, 3) = cart_T(2, 3) - 2 * lego_ptr->brick_height() - 0.0078;
-
+                            lego_ptr->calc_brick_sup_pose(brick_name, cart_T, cur_graph_node["sup_side"].asInt(), false, support_T2);
                             Eigen::MatrixXd init_q(lego_ptr->robot_dof_2(), 1);
                             init_q = home_q;
                             init_q(4) = 30;
-                            r2_cur_goal = lego_manipulation::math::IK(init_q, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
+                            r2_cur_goal = lego_manipulation::math::IK(init_q, support_T2.block(0, 3, 3, 1), support_T2.block(0, 0, 3, 3),
                                                                     lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), 0, 10e5, 10e-4);
                         }
                         if (support == 1) {
                             use_r1 = 1;
-                            support_T(0, 3) = cart_T(0, 3);
-                            support_T(1, 3) = cart_T(1, 3) - 1 * 0.008 - 0.0002;
-                            support_T(2, 3) = cart_T(2, 3) - 2 * lego_ptr->brick_height() - 0.0078;
+                            lego_ptr->calc_brick_sup_pose(brick_name, cart_T, cur_graph_node["sup_side"].asInt(), false, support_T1);
 
                             Eigen::MatrixXd init_q(lego_ptr->robot_dof_1(), 1);
                             init_q = home_q;
                             init_q(4) = 30;
-                            r1_cur_goal = lego_manipulation::math::IK(init_q, support_T.block(0, 3, 3, 1), support_T.block(0, 0, 3, 3),
+                            r1_cur_goal = lego_manipulation::math::IK(init_q, support_T1.block(0, 3, 3, 1), support_T1.block(0, 0, 3, 3),
                                                                     lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), 0, 10e5, 10e-4);
                         }
                     }

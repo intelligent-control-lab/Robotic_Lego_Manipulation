@@ -11,8 +11,8 @@
     "r2_DH_tool_disassemble_fname":"/config/robot_properties/gp4_tool_disassemble_DH.txt",
     "Robot2_Base_fname":"/config/robot_properties/r2_base.txt",
     
-    "Env_Setup_fname":"/config/env_setup_bridge_top.json",
-    "Task_Graph_fname":"/config/assembly_tasks/bridge_top.json",
+    "Env_Setup_fname":"/config/env_setup_bridge.json",
+    "Task_Graph_fname":"/config/assembly_tasks/bridge.json",
     "lego_lib_fname":"/config/lego_library.json",
     "Twist_Deg":14,
     "Waypoint_Travel_Time":0.5,

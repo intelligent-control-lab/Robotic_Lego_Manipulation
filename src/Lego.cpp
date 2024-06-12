@@ -687,6 +687,43 @@ void Lego::calc_brick_grab_pose(const std::string& name, const bool& assemble_po
     T = grab_pose_mtx;
 }
 
+void Lego::calc_brick_sup_pose(const std::string&name, const Eigen::MatrixXd& cart_T, const int& press_side, 
+    const bool &offset, Eigen::MatrixXd &T)
+{
+    // copy the sup pose's orientation
+    Eigen::Matrix4d sup_pose_mtx = Eigen::Matrix4d::Identity(4, 4);
+    sup_pose_mtx.block(0, 0, 3, 3) = T.block(0, 0, 3, 3);
+
+    // copy the lego's x y z
+    sup_pose_mtx.col(3) << cart_T(0, 3), cart_T(1, 3), cart_T(2, 3), 1;
+
+    // calculate the sup offset
+    Eigen::Matrix4d grab_offset_mtx = Eigen::Matrix4d::Identity(4, 4);
+    if (press_side == 2) {
+        grab_offset_mtx(0, 3) = 0;
+        if (offset) {
+            grab_offset_mtx(1, 3) = 3 * 0.008 + 0.0002;
+        }
+        else {
+            grab_offset_mtx(1, 3) = 1 * 0.008 + 0.0002;
+        }
+    }
+    else if (press_side == 3) {
+        grab_offset_mtx(0, 3) = 0;
+        if (offset) {
+            grab_offset_mtx(1, 3) = -3 * 0.008 - 0.0002;
+        }
+        else {
+            grab_offset_mtx(1, 3) = -1 * 0.008 - 0.0002;
+        }
+    }
+    grab_offset_mtx(2, 3) = -2 * brick_height_m_ - 0.0078;
+
+    sup_pose_mtx = grab_offset_mtx * sup_pose_mtx;
+
+    T = sup_pose_mtx;
+}
+
 
 std::string Lego::get_brick_name_by_id(const int& id, const int& seq_id)
 {

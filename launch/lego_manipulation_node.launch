@@ -1,5 +1,8 @@
 <launch>
-    <include file="$(find robot_digital_twin)/launch/dual_gp4.launch"/>
+    <include file="$(find robot_digital_twin)/launch/dual_gp4.launch">
+        <arg name="env" value="lego_setup_large"/>
+    </include>
+
     <include file="$(find stmotion_controller)/launch/r1_controller_node.launch"/>
     <include file="$(find stmotion_controller)/launch/r2_controller_node.launch"/>
     <node name="lego_manipulation_task_planning" pkg="lego_manipulation" type="lego_manipulation_task_planning" output="screen" required="true" launch-prefix="bash -c 'sleep 10; $0 $@'">

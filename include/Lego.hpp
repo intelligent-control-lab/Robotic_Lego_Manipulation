@@ -117,6 +117,7 @@ class Lego
         void calc_brick_grab_pose(const std::string& name, const bool& assemble_pose, const bool& take_brick,
                                   const int& brick_assemble_x, const int& brick_assemble_y, const int& brick_assemble_z, 
                                   const int& orientation, const int& press_side, Eigen::MatrixXd& T);
+        void calc_brick_sup_pose(const std::string&name, const Eigen::MatrixXd& cart_T, const int& press_side, const bool& offset, Eigen::MatrixXd &T);
         int brick_instock(const std::string& name) {return brick_map_[name].in_stock;};
         int robot_dof_1() {return r1_robot_dof_;};
         int robot_dof_2() {return r2_robot_dof_;};

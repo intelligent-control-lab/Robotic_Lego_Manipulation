@@ -33,7 +33,8 @@
         "ori":0,
         "press_side":2,
         "robot_id":1,
-        "sup_robot_id":2
+        "sup_robot_id":2,
+        "sup_side":3
     },
     "4":
     {
@@ -45,6 +46,7 @@
         "ori":0,
         "press_side":2,
         "robot_id":1,
-        "sup_robot_id":2
+        "sup_robot_id":2,
+        "sup_side":3
     }
 }
