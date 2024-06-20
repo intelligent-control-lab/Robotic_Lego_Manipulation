@@ -74,7 +74,7 @@
     "7":
     {
         "x":23,
-        "y":13,
+        "y":15,
         "z":7,
         "brick_id":2,
         "brick_seq":4,
@@ -86,20 +86,19 @@
     "8":
     {
         "x":23,
-        "y":11,
+        "y":13,
         "z":8,
         "brick_id":2,
         "brick_seq":9,
         "ori":0,
         "press_side":2,
         "robot_id":2,
-        "sup_robot_id":1,
-        "sup_side":3
+        "sup_robot_id":0
     },
     "9":
     {
         "x":23,
-        "y":9,
+        "y":11,
         "z":9,
         "brick_id":2,
         "brick_seq":5,
@@ -112,7 +111,7 @@
     "10":
     {
         "x":23,
-        "y":7,
+        "y":9,
         "z":10,
         "brick_id":2,
         "brick_seq":10,
