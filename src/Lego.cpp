@@ -687,8 +687,8 @@ void Lego::calc_brick_grab_pose(const std::string& name, const bool& assemble_po
     T = grab_pose_mtx;
 }
 
-void Lego::calc_brick_sup_pose(const std::string&name, const Eigen::MatrixXd& cart_T, const int& press_side, 
-    const bool &offset, Eigen::MatrixXd &T)
+void Lego::calc_brick_sup_pose(const std::string&name, const Eigen::MatrixXd& cart_T, const int &dx,
+    const int &dy, const int &dz, const bool &shift, Eigen::MatrixXd &T)
 {
     // copy the sup pose's orientation
     Eigen::Matrix4d sup_pose_mtx = Eigen::Matrix4d::Identity(4, 4);
@@ -699,25 +699,34 @@ void Lego::calc_brick_sup_pose(const std::string&name, const Eigen::MatrixXd& ca
 
     // calculate the sup offset
     Eigen::Matrix4d grab_offset_mtx = Eigen::Matrix4d::Identity(4, 4);
-    if (press_side == 2) {
-        grab_offset_mtx(0, 3) = 0;
-        if (offset) {
-            grab_offset_mtx(1, 3) = 3 * 0.008 + 0.0002;
-        }
-        else {
-            grab_offset_mtx(1, 3) = 1 * 0.008 + 0.0002;
-        }
-    }
-    else if (press_side == 3) {
-        grab_offset_mtx(0, 3) = 0;
-        if (offset) {
-            grab_offset_mtx(1, 3) = -3 * 0.008 - 0.0002;
-        }
-        else {
-            grab_offset_mtx(1, 3) = -1 * 0.008 - 0.0002;
+
+    grab_offset_mtx(0, 3) = dx * P_len_;
+    if (dx > 0) {
+        grab_offset_mtx(0, 3) += 0.0002;
+        if (shift) {
+            grab_offset_mtx(0, 3) += 2 * P_len_;
         }
     }
-    grab_offset_mtx(2, 3) = -2 * brick_height_m_ - 0.0078;
+    else if (dx < 0) {
+        grab_offset_mtx(0, 3) -= 0.0002;
+        if (shift) {
+            grab_offset_mtx(0, 3) -= 2 * P_len_;
+        }
+    }
+    grab_offset_mtx(1, 3) = dy * P_len_;
+    if (dy > 0) {
+        grab_offset_mtx(1, 3) += 0.0002;
+        if (shift) {
+            grab_offset_mtx(1, 3) += 2 * P_len_;
+        }
+    }
+    else if (dy < 0) {
+        grab_offset_mtx(1, 3) -= 0.0002;
+        if (shift) {
+            grab_offset_mtx(1, 3) -= 2 * P_len_;
+        }
+    }
+    grab_offset_mtx(2, 3) = -dz * brick_height_m_ - 0.0078;
 
     sup_pose_mtx = grab_offset_mtx * sup_pose_mtx;
 

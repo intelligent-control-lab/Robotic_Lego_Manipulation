@@ -446,7 +446,8 @@ int main(int argc, char **argv)
                     {
                         if (support == 2) {
                             use_r2 = 1;
-                            lego_ptr->calc_brick_sup_pose(brick_name, cart_T, cur_graph_node["sup_side"].asInt(), true, support_pre_T2);
+                            lego_ptr->calc_brick_sup_pose(brick_name, cart_T, cur_graph_node["sup_dx"].asInt(),
+                                cur_graph_node["sup_dy"].asInt(), cur_graph_node["sup_dz"].asInt(), true, support_pre_T2);
 
                             Eigen::MatrixXd init_q(lego_ptr->robot_dof_2(), 1);
                             init_q = home_q;
@@ -456,7 +457,8 @@ int main(int argc, char **argv)
                         }
                         if (support == 1) {
                             use_r1 = 1;
-                            lego_ptr->calc_brick_sup_pose(brick_name, cart_T, cur_graph_node["sup_side"].asInt(), true, support_pre_T1);
+                            lego_ptr->calc_brick_sup_pose(brick_name, cart_T, cur_graph_node["sup_dx"].asInt(),
+                                cur_graph_node["sup_dy"].asInt(), cur_graph_node["sup_dz"].asInt(), true, support_pre_T1);
 
                             Eigen::MatrixXd init_q(lego_ptr->robot_dof_1(), 1);
                             init_q = home_q;
@@ -488,7 +490,8 @@ int main(int argc, char **argv)
                     {
                         if (support == 2) {
                             use_r2 = 1;
-                            lego_ptr->calc_brick_sup_pose(brick_name, cart_T, cur_graph_node["sup_side"].asInt(), false, support_T2);
+                            lego_ptr->calc_brick_sup_pose(brick_name, cart_T, cur_graph_node["sup_dx"].asInt(),
+                                cur_graph_node["sup_dy"].asInt(), cur_graph_node["sup_dz"].asInt(), false, support_T2);
                             Eigen::MatrixXd init_q(lego_ptr->robot_dof_2(), 1);
                             init_q = home_q;
                             init_q(4) = 30;
@@ -497,7 +500,8 @@ int main(int argc, char **argv)
                         }
                         if (support == 1) {
                             use_r1 = 1;
-                            lego_ptr->calc_brick_sup_pose(brick_name, cart_T, cur_graph_node["sup_side"].asInt(), false, support_T1);
+                            lego_ptr->calc_brick_sup_pose(brick_name, cart_T, cur_graph_node["sup_dx"].asInt(),
+                                cur_graph_node["sup_dy"].asInt(), cur_graph_node["sup_dz"].asInt(), false, support_T1);
 
                             Eigen::MatrixXd init_q(lego_ptr->robot_dof_1(), 1);
                             init_q = home_q;

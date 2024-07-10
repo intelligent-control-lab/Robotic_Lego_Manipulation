@@ -34,7 +34,9 @@
         "press_side":2,
         "robot_id":1,
         "sup_robot_id":2,
-        "sup_side":3
+        "sup_dx":0,
+        "sup_dy":-1,
+        "sup_dz":2
     },
     "4":
     {
@@ -47,6 +49,8 @@
         "press_side":2,
         "robot_id":1,
         "sup_robot_id":2,
-        "sup_side":3
+        "sup_dx":0,
+        "sup_dy":-1,
+        "sup_dz":2
     }
 }
