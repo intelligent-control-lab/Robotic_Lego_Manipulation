@@ -389,6 +389,10 @@ class Robot():
         pca = PCA(n_components=2)
         pca.fit(points)
         block_rot_z = np.arctan2(pca.components_[0, 1], pca.components_[0, 0])
+        while(block_rot_z < -np.pi / 2):
+            block_rot_z += np.pi
+        while(block_rot_z > np.pi / 2):
+            block_rot_z -= np.pi
 
         center_x = int(np.average(center_x))
         center_y = int(np.average(center_y))
@@ -399,7 +403,7 @@ class Robot():
         block_cam_pos = np.linalg.inv(self.cam_mtx) @ center_pt
         block_cam_pos = np.concatenate((block_cam_pos, np.asarray([[1]])))
         brick_pos = self.robot2plane @ block_cam_pos
-        return brick_pos, block_rot_z - np.pi
+        return brick_pos, block_rot_z
 
 
 class Gripper():

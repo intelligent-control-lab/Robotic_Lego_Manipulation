@@ -24,14 +24,13 @@ def main():
     gripper_deg = 101
     while not rospy.is_shutdown():
         if(fanuc.goal_reached()):
-            if(task_idx > len(goal_list)):
+            if(task_idx >= len(goal_list)):
                 break
             if(mode == 0):
                 cur_goal = home_q
                 fanuc.gripper.drive(0, 0, 0, 255)
             elif(mode == 1):
                 pick_pos, pick_rz = fanuc.find_brick(goal_list[task_idx][0])
-                place_pos, place_rz = fanuc.find_brick(goal_list[task_idx][1])
                 goal_T = home_T
                 goal_T[0, 3] = pick_pos[0]
                 goal_T[1, 3] = pick_pos[1]
@@ -49,6 +48,7 @@ def main():
                 cur_goal = home_q
                 fanuc.gripper.drive(gripper_deg, gripper_deg, gripper_deg, 255)
             elif(mode == 4):
+                place_pos, place_rz = fanuc.find_brick(goal_list[task_idx][1])
                 goal_T = home_T
                 goal_T[0, 3] = place_pos[0]
                 goal_T[1, 3] = place_pos[1]
