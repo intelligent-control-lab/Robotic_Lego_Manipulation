@@ -1,6 +1,5 @@
 <launch>
     <include file="$(find robot_digital_twin)/launch/dual_gp4.launch">
-        <arg name="env" value="lego_setup_large"/>
     </include>
 
     <include file="$(find stmotion_controller)/launch/r1_controller_node.launch"/>
