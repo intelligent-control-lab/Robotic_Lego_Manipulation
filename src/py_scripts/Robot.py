@@ -379,11 +379,19 @@ class Robot():
         elif(color == "green"):
             color_val = [0, 255, 0]
         color_val = np.asarray(color_val)
+        time.sleep(0.5)
+        color_img = np.copy(self.color_img)
+        depth_img = np.copy(self.depth_img)
 
-        mask = cv2.inRange(self.color_img, color_val-20, color_val+20)
-        masked_color_img = cv2.bitwise_and(self.color_img, self.color_img, mask=mask)
-        masked_depth_img = cv2.bitwise_and(self.depth_img, self.depth_img, mask=mask)
+        mask = cv2.inRange(color_img, color_val-20, color_val+20) # might need tuning
+        masked_color_img = cv2.bitwise_and(color_img, color_img, mask=mask)
+        masked_depth_img = cv2.bitwise_and(depth_img, depth_img, mask=mask)
         center_y, center_x, _ = np.where(masked_color_img >= 1)
+        area = np.sum(np.clip(masked_color_img, 0, 1))
+        if(area < 2000): # might need tuning
+            gripper_deg = 106
+        else:
+            gripper_deg = 101
 
         points = np.concatenate((center_x.reshape(-1, 1), center_y.reshape(-1, 1)), axis=1)
         pca = PCA(n_components=2)
@@ -403,7 +411,7 @@ class Robot():
         block_cam_pos = np.linalg.inv(self.cam_mtx) @ center_pt
         block_cam_pos = np.concatenate((block_cam_pos, np.asarray([[1]])))
         brick_pos = self.robot2plane @ block_cam_pos
-        return brick_pos, block_rot_z
+        return brick_pos, block_rot_z, gripper_deg
 
 
 class Gripper():
