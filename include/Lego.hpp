@@ -22,6 +22,7 @@ struct lego_brick{
     double cur_y;
     double cur_z;
     int press_side;
+    int press_offset;
     Eigen::Quaterniond cur_quat;
     bool in_stock;
     std::map<std::string, std::string> top_connect;
@@ -61,20 +62,26 @@ class Lego
         int r2_robot_dof_ = 6;
         Eigen::Matrix4d world_base_frame_;
         Eigen::Matrix4d world_T_base_inv_;
+        Eigen::MatrixXd thetamax_; 
+        Eigen::MatrixXd thetamax_rad_;
 
         Eigen::MatrixXd r1_DH_; // size = [n_joint + n_ee, 4]
-        Eigen::Matrix4d r1_ee_inv_, r1_tool_inv_, r1_tool_assemble_inv_, r1_tool_disassemble_inv_;
+        Eigen::Matrix4d r1_ee_inv_, r1_tool_inv_, r1_tool_assemble_inv_, r1_tool_disassemble_inv_, r1_tool_alt_inv_, r1_tool_alt_assemble_inv_;
         Eigen::MatrixXd r1_DH_tool_;
         Eigen::MatrixXd r1_DH_tool_assemble_;
         Eigen::MatrixXd r1_DH_tool_disassemble_;
+        Eigen::MatrixXd r1_DH_tool_alt_;
+        Eigen::MatrixXd r1_DH_tool_alt_assemble_;
         Eigen::MatrixXd r1_base_frame_;
         Eigen::Matrix4d r1_T_base_inv_;
 
         Eigen::MatrixXd r2_DH_; // size = [n_joint + n_ee, 4]
-        Eigen::Matrix4d r2_ee_inv_, r2_tool_inv_, r2_tool_assemble_inv_, r2_tool_disassemble_inv_;
+        Eigen::Matrix4d r2_ee_inv_, r2_tool_inv_, r2_tool_assemble_inv_, r2_tool_disassemble_inv_, r2_tool_alt_inv_, r2_tool_alt_assemble_inv_;
         Eigen::MatrixXd r2_DH_tool_;
         Eigen::MatrixXd r2_DH_tool_assemble_;
         Eigen::MatrixXd r2_DH_tool_disassemble_;
+        Eigen::MatrixXd r2_DH_tool_alt_;
+        Eigen::MatrixXd r2_DH_tool_alt_assemble_;
         Eigen::MatrixXd r2_base_frame_;
         Eigen::Matrix4d r2_T_base_inv_;
 
@@ -100,11 +107,18 @@ class Lego
                    const std::string& r1_DH_tool_assemble_fname, const std::string& r1_base_fname, 
                    const std::string& r2_DH_fname, const std::string& r2_DH_tool_fname, const std::string& r2_DH_tool_disassemble_fname, 
                    const std::string& r2_DH_tool_assemble_fname, const std::string& r2_base_fname,const bool& use_config_file, const ros::ServiceClient& cli);
+        void setup_dual_arm(const std::string& env_setup_fname, const std::string& lego_lib_fname, const Json::Value& task_json, const std::string& world_base_fname,
+                            const std::string& r1_DH_fname, const std::string& r1_DH_tool_fname, const std::string& r1_DH_tool_disassemble_fname, 
+                            const std::string& r1_DH_tool_assemble_fname, const std::string& r1_DH_tool_alt_fname, const std::string& r1_DH_tool_alt_assemble_fname, const std::string& r1_base_fname, 
+                            const std::string& r2_DH_fname, const std::string& r2_DH_tool_fname, const std::string& r2_DH_tool_disassemble_fname, 
+                            const std::string& r2_DH_tool_assemble_fname, const std::string& r2_DH_tool_alt_fname, const std::string& r2_DH_tool_alt_assemble_fname, const std::string& r2_base_fname, const ros::ServiceClient& cli);
         void set_robot_base(const std::string& r1_base_fname, const std::string& r2_base_fname);
         void set_DH(const std::string& r1_DH_fname, const std::string& r2_DH_fname);
         void set_DH_tool(const std::string& r1_DH_tool_fname, const std::string& r2_DH_tool_fname);
         void set_DH_tool_assemble(const std::string& r1_DH_tool_assemble_fname, const std::string& r2_DH_tool_assemble_fname);
         void set_DH_tool_disassemble(const std::string& r1_DH_tool_disassemble_fname, const std::string& r2_DH_tool_disassemble_fname);
+        void set_DH_tool_alt(const std::string& r1_DH_tool_alt_fname, const std::string& r2_DH_tool_alt_fname);
+        void set_DH_tool_alt_assemble(const std::string& r1_DH_tool_alt_assemble_fname, const std::string& r2_DH_tool_alt_assemble_fname);
         void print_manipulation_property();
         void set_assemble_plate_pose(const double& x, const double& y, const double& z, const double& roll, const double& pitch, const double& yaw);
         void set_storage_plate_pose(const double& x, const double& y, const double& z, const double& roll, const double& pitch, const double& yaw);
@@ -117,8 +131,17 @@ class Lego
         void calc_brick_grab_pose(const std::string& name, const bool& assemble_pose, const bool& take_brick,
                                   const int& brick_assemble_x, const int& brick_assemble_y, const int& brick_assemble_z, 
                                   const int& orientation, const int& press_side, Eigen::MatrixXd& T);
-        void calc_brick_sup_pose(const std::string&name, const Eigen::MatrixXd& cart_T, const int& dx, const int& dy, const int& dz, 
-                const bool &offset, Eigen::MatrixXd &T);
+        void calc_brick_sup_pose(const std::string&name, const Eigen::MatrixXd& cart_T, const int& dx, const int& dy, const int& dz, const bool &offset, Eigen::MatrixXd &T);
+
+        void brick_pose_in_stock(const std::string& name, const int& press_side, const int& press_offset, Eigen::Matrix4d& T);
+        void support_pose_down_pre(const int& x, const int& y, const int& z, const int& ori, Eigen::Matrix4d& T);
+        void support_pose_down(const int& x, const int& y, const int& z, const int& ori, Eigen::Matrix4d& T);
+        void support_pose(const int& x, const int& y, const int& z, const int& ori, Eigen::Matrix4d& T);
+        void assemble_pose_from_top(const int& press_x, const int& press_y, const int& press_z, const int& press_ori, const int& press_side, Eigen::Matrix4d& T);
+        bool joint_in_range(const math::VectorJd& theta, const bool& is_rad);
+        math::VectorJd IK(const math::VectorJd& cur_q, const Eigen::Matrix4d& goal_T, const Eigen::MatrixXd& DH, const Eigen::Matrix4d& T_base, const Eigen::Matrix4d& T_base_inv,
+                          const Eigen::Matrix4d& T_tool_inv, const bool& joint_rad, bool& status);
+
         int brick_instock(const std::string& name) {return brick_map_[name].in_stock;};
         int robot_dof_1() {return r1_robot_dof_;};
         int robot_dof_2() {return r2_robot_dof_;};
@@ -127,6 +150,8 @@ class Lego
         Eigen::MatrixXd robot_DH_r1() {return r1_DH_;};
         Eigen::MatrixXd robot_DH_tool_r1() {return r1_DH_tool_;};
         Eigen::MatrixXd robot_DH_tool_assemble_r1() {return r1_DH_tool_assemble_;};
+        Eigen::MatrixXd robot_DH_tool_alt_r1() {return r1_DH_tool_alt_;};
+        Eigen::MatrixXd robot_DH_tool_alt_assemble_r1() {return r1_DH_tool_alt_assemble_;};
         Eigen::MatrixXd robot_DH_tool_disassemble_r1() {return r1_DH_tool_disassemble_;};
         Eigen::MatrixXd robot_base_r1() {return r1_base_frame_;};
         Eigen::Matrix4d robot_base_inv_r1() {return r1_T_base_inv_;};
@@ -138,6 +163,8 @@ class Lego
         Eigen::MatrixXd robot_DH_tool_r2() {return r2_DH_tool_;};
         Eigen::MatrixXd robot_DH_tool_assemble_r2() {return r2_DH_tool_assemble_;};
         Eigen::MatrixXd robot_DH_tool_disassemble_r2() {return r2_DH_tool_disassemble_;};
+        Eigen::MatrixXd robot_DH_tool_alt_r2() {return r2_DH_tool_alt_;};
+        Eigen::MatrixXd robot_DH_tool_alt_assemble_r2() {return r2_DH_tool_alt_assemble_;};
         Eigen::MatrixXd robot_base_r2() {return r2_base_frame_;};
         Eigen::Matrix4d robot_base_inv_r2() {return r2_T_base_inv_;};
         Eigen::Matrix4d robot_ee_inv_r2() {return r2_ee_inv_;};

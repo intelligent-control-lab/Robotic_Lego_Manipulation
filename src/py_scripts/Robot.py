@@ -4,37 +4,44 @@ import copy
 
 class Robot():
     def __init__(self):
+        cam_mount_thickness = 0.00254
         self.DH = np.matrix([[0, 0, 0, -np.pi/2],
                              [-np.pi/2, 0, 0.26, np.pi],
                              [0, 0, 0.015, -np.pi/2],
                              [0, -0.29, 0, np.pi/2],
                              [0, 0, 0, -np.pi/2],
-                             [0, 0, 0, 0]]) # FTS and mounting plate thickness
+                             [0, -0.072, 0, np.pi]]) 
+        
         self.DH_tool = np.matrix([[0, 0, 0, -np.pi/2],
                              [-np.pi/2, 0, 0.26, np.pi],
                              [0, 0, 0.015, -np.pi/2],
                              [0, -0.29, 0, np.pi/2],
                              [0, 0, 0, -np.pi/2],
-                             [0, -0.183, 0, np.pi]])
+                             [0, -0.183-cam_mount_thickness, 0, np.pi]])
         self.DH_tool_assemble = np.matrix([[0, 0, 0, -np.pi/2],
                              [-np.pi/2, 0, 0.26, np.pi],
                              [0, 0, 0.015, -np.pi/2],
                              [0, -0.29, 0, np.pi/2],
                              [0, 0, 0, -np.pi/2],
-                             [0, -0.183, 0.0078, np.pi]])
+                             [0, -0.183-cam_mount_thickness, 0.0078, np.pi]])
+        
         self.DH_tool1 = np.matrix([[0, 0, 0, -np.pi/2],
                              [-np.pi/2, 0, 0.26, np.pi],
                              [0, 0, 0.015, -np.pi/2],
                              [0, -0.29, 0, np.pi/2],
                              [np.pi/2, 0, 0, -np.pi/2],
-                             [np.pi, 0.0078 + 0.0096, 0.183 + 0.0032 - 0.0078,  0]])
+                             [np.pi, 0.0078 + 0.0096, 0.183 + 0.0032 - 0.0078 + cam_mount_thickness,  0]])
         
         self.DH_tool1_assemble = np.matrix([[0, 0, 0, -np.pi/2],
                              [-np.pi/2, 0, 0.26, np.pi],
                              [0, 0, 0.015, -np.pi/2],
                              [0, -0.29, 0, np.pi/2],
                              [np.pi/2, 0, 0, -np.pi/2],
-                             [np.pi, 0.0078, 0.183 + 0.0032 - 0.0078,  0]])
+                             [np.pi, 0.0078, 0.183 + 0.0032 - 0.0078 + cam_mount_thickness,  0]])
+        
+        print(self.DH_tool1)
+        print(self.DH_tool1_assemble)
+        
         self.base_trans = np.matrix([[1, 0, 0, 0],
                                      [0, 1, 0, 0],
                                      [0, 0, 1, 0.33],
