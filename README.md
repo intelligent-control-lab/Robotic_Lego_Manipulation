@@ -12,6 +12,48 @@ This repo includes Lego manipulation using Fanuc and Yaskawa robots.
 roslaunch lego_manipulation lego_manipulation_node.launch
 ```
 
+## Robot Manipulation Skills
+<div style="display: flex;  text-align: center; flex-wrap: nowrap;">
+  <figure style="margin-right: 100px;">
+    <img src="./images/transit.gif" alt="Transit image" width="auto" height="300" title="Transit"/>
+    <figcaption>Transit a brick</figcaption>
+  </figure>
+
+  <figure style="margin-right: 100px;">
+    <img src="./images/pick.gif" alt="Pick image" width="auto" height="300" title="Pick"/>
+    <figcaption>Pick/Disassemble</figcaption>
+  </figure>
+
+  <figure style="margin-right: 100px;">
+    <img src="./images/place.gif" alt="Place image" width="auto" height="300" title="Place"/>
+    <figcaption>Place/Assemble</figcaption>
+  </figure>
+
+  <figure>
+    <img src="./images/support.gif" alt="Support image" width="auto" height="300" title="Support"/>
+    <figcaption>Support</figcaption>
+  </figure>
+</div>
+
+
+## Robotic Lego Assembly in Motion
+<div style="display: flex;  text-align: center; flex-wrap: nowrap;">
+  <figure style="margin-right: 100px;">
+    <img src="./images/vday.gif" alt="Transit image" width="auto" height="500" title="Transit"/>
+    <figcaption>Surprise on Valentine's Day</figcaption>
+  </figure>
+
+  <figure style="margin-right: 100px;">
+    <img src="./images/dual_arm.gif" alt="Pick image" width="auto" height="500" title="Pick"/>
+    <figcaption>Multi-Robot Collaboration</figcaption>
+  </figure>
+
+  <figure style="margin-right: 100px;">
+    <img src="./images/fanuc.gif" alt="Place image" width="auto" height="500" title="Place"/>
+    <figcaption>Build More!</figcaption>
+  </figure>
+
+</div>
 
 ## Citation
 If you find this repository helpful, please kindly cite our work.
