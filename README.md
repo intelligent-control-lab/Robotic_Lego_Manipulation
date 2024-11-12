@@ -13,24 +13,24 @@ roslaunch lego_manipulation lego_manipulation_node.launch
 ```
 
 ## Robot Manipulation Skills
-<div style="display: flex;  text-align: center; flex-wrap: nowrap;">
-  <figure style="margin-right: 100px;">
-    <img src="./images/transit.gif" alt="Transit image" width="auto" height="300" title="Transit"/>
+<div style="display: flex; justify-content: space-between; text-align: center;">
+  <figure style="text-align: center; margin-right: 10px;">
+    <img src="./images/transit.gif" alt="Transit image" width="auto" height="100" title="Transit"/>
     <figcaption>Transit a brick</figcaption>
   </figure>
 
   <figure style="margin-right: 100px;">
-    <img src="./images/pick.gif" alt="Pick image" width="auto" height="300" title="Pick"/>
+    <img src="./images/pick.gif" alt="Pick image" width="auto" height="100" title="Pick"/>
     <figcaption>Pick/Disassemble</figcaption>
   </figure>
 
   <figure style="margin-right: 100px;">
-    <img src="./images/place.gif" alt="Place image" width="auto" height="300" title="Place"/>
+    <img src="./images/place.gif" alt="Place image" width="auto" height="100" title="Place"/>
     <figcaption>Place/Assemble</figcaption>
   </figure>
 
   <figure>
-    <img src="./images/support.gif" alt="Support image" width="auto" height="300" title="Support"/>
+    <img src="./images/support.gif" alt="Support image" width="auto" height="100" title="Support"/>
     <figcaption>Support</figcaption>
   </figure>
 </div>
