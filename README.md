@@ -16,7 +16,7 @@ roslaunch lego_manipulation lego_manipulation_node.launch
 1. Modify the configuration file `path_to_repo/config/user_config.json`.
 2. Download the controller at [ST Motion Controller](https://github.com/intelligent-control-lab/Stream_Motion_Controller) and the digital twin at [Robot Digital Twin](https://github.com/intelligent-control-lab/Robot_Digital_Twin).
 3. Switch all three repos to `dual-arm-mfi` branch.
-4. 
+4. Example command to assemble a fish (i.e. defaul setting in the config file)
 ```
 roslaunch lego_manipulation dual_arm_lego_manipulation_node.launch num_b2:=25 color_b2:=Blue color_b6:=Yellow color_b9:=Orange
 ```
