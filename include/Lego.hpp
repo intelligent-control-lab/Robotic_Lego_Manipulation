@@ -52,6 +52,7 @@ class Lego
         ros::ServiceClient client_; 
         gazebo_msgs::SetModelState setmodelstate_;
         double brick_height_m_ = 0.0096;
+        double lever_wall_height_ = 0.0032;
         double brick_len_offset_ = 0.0002;
         double P_len_ = 0.008;
         double EPS_ = 0.00001;
@@ -125,7 +126,7 @@ class Lego
         void set_world_base(const std::string& world_base_fname);
 
         void update_bricks(const math::VectorJd& robot_q, const Eigen::MatrixXd& DH, const Eigen::MatrixXd& base_frame, 
-                           const bool& joint_rad, const std::string& brick_name);
+                           const bool& joint_rad, const std::string& brick_name, const int& mode);
         std::string get_brick_name_by_id(const int& id, const int& seq_id);
         void update_brick_connection();
         void calc_brick_grab_pose(const std::string& name, const bool& assemble_pose, const bool& take_brick,
@@ -158,6 +159,8 @@ class Lego
         Eigen::Matrix4d robot_ee_inv_r1() {return r1_ee_inv_;};
         Eigen::Matrix4d robot_tool_inv_r1() {return r1_tool_inv_;};
         Eigen::Matrix4d robot_tool_assemble_inv_r1() {return r1_tool_assemble_inv_;};
+        Eigen::Matrix4d robot_tool_alt_inv_r1() {return r1_tool_alt_inv_;};
+        Eigen::Matrix4d robot_tool_alt_assemble_inv_r1() {return r1_tool_alt_assemble_inv_;};
         Eigen::Matrix4d robot_tool_disassemble_inv_r1() {return r1_tool_disassemble_inv_;};
         Eigen::MatrixXd robot_DH_r2() {return r2_DH_;};
         Eigen::MatrixXd robot_DH_tool_r2() {return r2_DH_tool_;};
@@ -170,6 +173,8 @@ class Lego
         Eigen::Matrix4d robot_ee_inv_r2() {return r2_ee_inv_;};
         Eigen::Matrix4d robot_tool_inv_r2() {return r2_tool_inv_;};
         Eigen::Matrix4d robot_tool_assemble_inv_r2() {return r2_tool_assemble_inv_;};
+        Eigen::Matrix4d robot_tool_alt_inv_r2() {return r2_tool_alt_inv_;};
+        Eigen::Matrix4d robot_tool_alt_assemble_inv_r2() {return r2_tool_alt_assemble_inv_;};
         Eigen::Matrix4d robot_tool_disassemble_inv_r2() {return r2_tool_disassemble_inv_;};
 
         bool robot_is_static(math::VectorJd robot_qd, math::VectorJd robot_qdd, const int& robot_dof);
@@ -177,6 +182,8 @@ class Lego
         Eigen::Matrix4d assemble_plate_pose() {return assemble_plate_.pose;};
         Eigen::Matrix4d storage_plate_pose() {return storage_plate_.pose;};
         double brick_height() {return brick_height_m_;};
+        double lever_wall_height() {return lever_wall_height_;};
+        double knob_height() {return knob_height_;};
 };
 }
 }

@@ -189,10 +189,10 @@ int main(int argc, char **argv)
             if (mode >= 4 && mode <= 9)
             {
                 if (robot_id == 1) {
-                    lego_ptr->update_bricks(robot1_q, lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), false, brick_name);
+                    lego_ptr->update_bricks(robot1_q, lego_ptr->robot_DH_tool_r1(), lego_ptr->robot_base_r1(), false, brick_name, 0);
                 }
                 if (robot_id == 2) {
-                    lego_ptr->update_bricks(robot2_q, lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), false, brick_name);
+                    lego_ptr->update_bricks(robot2_q, lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), false, brick_name, 0);
                 }
             }
             if((use_yk && move_on_to_next) || 

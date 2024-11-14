@@ -1,0 +1,44 @@
+<launch>
+    <arg name="num_b2" default="5"/> 
+    <arg name="num_b3" default="5"/> 
+    <arg name="num_b4" default="5"/> 
+    <arg name="num_b5" default="5"/> 
+    <arg name="num_b6" default="5"/> 
+    <arg name="num_b9" default="5"/> 
+    <arg name="num_b10" default="5"/> 
+    <arg name="num_b12" default="5"/> 
+    <arg name="color_b2" default="Red"/> 
+    <arg name="color_b3" default="Red"/> 
+    <arg name="color_b4" default="Red"/> 
+    <arg name="color_b5" default="Red"/> 
+    <arg name="color_b6" default="Red"/> 
+    <arg name="color_b9" default="Red"/> 
+    <arg name="color_b10" default="Red"/> 
+    <arg name="color_b12" default="Red"/> 
+
+    <include file="$(find robot_digital_twin)/launch/dual_gp4.launch">
+        <arg name="num_b2" value="$(arg num_b2)" /> 
+        <arg name="num_b3" default="$(arg num_b3)"/> 
+        <arg name="num_b4" default="$(arg num_b4)"/> 
+        <arg name="num_b5" default="$(arg num_b5)"/> 
+        <arg name="num_b6" default="$(arg num_b6)"/> 
+        <arg name="num_b9" default="$(arg num_b9)"/> 
+        <arg name="num_b10" default="$(arg num_b10)"/> 
+        <arg name="num_b12" default="$(arg num_b12)"/> 
+        <arg name="color_b2" default="$(arg color_b2)"/> 
+        <arg name="color_b3" default="$(arg color_b3)"/> 
+        <arg name="color_b4" default="$(arg color_b4)"/> 
+        <arg name="color_b5" default="$(arg color_b5)"/> 
+        <arg name="color_b6" default="$(arg color_b6)"/> 
+        <arg name="color_b9" default="$(arg color_b9)"/> 
+        <arg name="color_b10" default="$(arg color_b10)"/> 
+        <arg name="color_b12" default="$(arg color_b12)"/> 
+    </include>
+
+    <include file="$(find stmotion_controller)/launch/r1_controller_node.launch"/>
+    <include file="$(find stmotion_controller)/launch/r2_controller_node.launch"/>
+    <node name="lego_manipulation_dual_arm" pkg="lego_manipulation" type="lego_manipulation_dual_arm" output="screen" required="true" launch-prefix="bash -c 'sleep 10; $0 $@'">
+        <param name="config_fname" value="$(find lego_manipulation)/config/user_config.json"/>
+        <param name="root_pwd" value="$(find lego_manipulation)/"/>
+    </node>
+</launch>

@@ -31,12 +31,12 @@ void Lego::setup_dual_arm(const std::string& env_setup_fname, const std::string&
 
     thetamax_.resize(r1_robot_dof_, 2);
     thetamax_rad_.resize(r1_robot_dof_, 2);
-    thetamax_ << -190, 190,
-                 -120, 90,
-                 -90, 90,
-                 -180, 180,
+    thetamax_ << -170, 170,
+                 -110, 130,
+                 -65, 200,
+                 -200, 200,
                  -120, 120,
-                 -360, 360;
+                 -450, 450;
     for(int i=0; i<r1_robot_dof_; i++)
     {
         thetamax_rad_.row(i) << thetamax_(i, 0) / 180 * PI, thetamax_(i, 1) / 180 * PI;
@@ -67,9 +67,9 @@ void Lego::setup_dual_arm(const std::string& env_setup_fname, const std::string&
             Eigen::AngleAxisd rollAngle(roll, Eigen::Vector3d::UnitX());
             Eigen::AngleAxisd pitchAngle(pitch, Eigen::Vector3d::UnitY());
             Eigen::AngleAxisd yawAngle(yaw, Eigen::Vector3d::UnitZ());
-            Eigen::Quaterniond quat = yawAngle * pitchAngle * rollAngle;
+            Eigen::Quaterniond quat_storage = yawAngle * pitchAngle * rollAngle;
             storage_plate_.pose = Eigen::Matrix4d::Identity(4, 4);
-            storage_plate_.pose.block(0, 0, 3, 3) = quat.matrix();
+            storage_plate_.pose.block(0, 0, 3, 3) = quat_storage.matrix();
             storage_plate_.pose.col(3) << x, y, z, 1;
             storage_plate_.width = (*brick)["width"].asInt();
             storage_plate_.height = (*brick)["height"].asInt();
@@ -91,13 +91,12 @@ void Lego::setup_dual_arm(const std::string& env_setup_fname, const std::string&
             Eigen::AngleAxisd rollAngle(roll, Eigen::Vector3d::UnitX());
             Eigen::AngleAxisd pitchAngle(pitch, Eigen::Vector3d::UnitY());
             Eigen::AngleAxisd yawAngle(yaw, Eigen::Vector3d::UnitZ());
-            Eigen::Quaterniond quat = yawAngle * pitchAngle * rollAngle;
+            Eigen::Quaterniond quat_assemble = yawAngle * pitchAngle * rollAngle;
             assemble_plate_.pose = Eigen::Matrix4d::Identity(4, 4);
-            assemble_plate_.pose.block(0, 0, 3, 3) = quat.matrix();
+            assemble_plate_.pose.block(0, 0, 3, 3) = quat_assemble.matrix();
             assemble_plate_.pose.col(3) << x, y, z, 1;
             assemble_plate_.width = (*brick)["width"].asInt();
             assemble_plate_.height = (*brick)["height"].asInt();
-
             assemble_plate_.pose = world_base_frame_ * assemble_plate_.pose;
             x = assemble_plate_.pose(0, 3);
             y = assemble_plate_.pose(1, 3);
@@ -694,15 +693,15 @@ void Lego::support_pose_down_pre(const int& x, const int& y, const int& z, const
     if(ori == 0)
     {
         init_q.col(0) << 0, 0, 0, 0, 0, 0;
-        goal_x = x - 2;
-        goal_y = y - 2;
+        goal_x = x - 3;
+        goal_y = y;
         goal_ori = 0;
         goal_press_side = 1;
     }
     else if(ori == 1)
     {
         init_q.col(0) << -90, 0, 0, 0, 0, 0;
-        goal_x = x - 3;
+        goal_x = x;
         goal_y = y + 3;
         goal_ori = 1;
         goal_press_side = 4;
@@ -710,7 +709,7 @@ void Lego::support_pose_down_pre(const int& x, const int& y, const int& z, const
     else if(ori == 2)
     {
         init_q.col(0) << 90, 0, 0, 0, 0, 0;
-        goal_x = x + 3;
+        goal_x = x;
         goal_y = y - 3;
         goal_ori = 1;
         goal_press_side = 1;
@@ -719,7 +718,7 @@ void Lego::support_pose_down_pre(const int& x, const int& y, const int& z, const
     {
         init_q.col(0) << 180, 0, 0, 0, 0, 0;
         goal_x = x + 3;
-        goal_y = y + 3;
+        goal_y = y;
         goal_ori = 0;
         goal_press_side = 4;
     }
@@ -769,8 +768,10 @@ void Lego::support_pose_down(const int& x, const int& y, const int& z, const int
     }
     init_T = math::FK(init_q, robot_DH_tool_r1(), robot_base_r1(), false);
     assemble_pose_from_top(goal_x, goal_y, goal_z, goal_ori, goal_press_side, tmp_T);
-    init_T.col(3) << tmp_T(0, 3), tmp_T(1, 3), tmp_T(2, 3), 1;
-    T = init_T;
+    init_T.col(3) << tmp_T(0, 3), tmp_T(1, 3), tmp_T(2, 3) + (brick_height_m_ - (P_len_ - brick_len_offset_)), 1;
+    Eigen::Matrix4d offset_T = Eigen::Matrix4d::Identity(4, 4);
+    offset_T.col(3) << 0, 0, -lever_wall_height_, 1;
+    T = init_T * offset_T;
 }
 
 void Lego::support_pose(const int& x, const int& y, const int& z, const int& ori, Eigen::Matrix4d& T)
@@ -814,8 +815,10 @@ void Lego::support_pose(const int& x, const int& y, const int& z, const int& ori
     }
     init_T = math::FK(init_q, robot_DH_tool_r1(), robot_base_r1(), false);
     assemble_pose_from_top(goal_x, goal_y, goal_z, goal_ori, goal_press_side, tmp_T);
-    init_T.col(3) << tmp_T(0, 3), tmp_T(1, 3), tmp_T(2, 3) + (brick_height_m_ - 0.0078), 1;
-    T = init_T;
+    init_T.col(3) << tmp_T(0, 3), tmp_T(1, 3), tmp_T(2, 3) + (brick_height_m_ - (P_len_ - brick_len_offset_)), 1;
+    Eigen::Matrix4d offset_T = Eigen::Matrix4d::Identity(4, 4);
+    offset_T.col(3) << 0, 0, -lever_wall_height_, 1;
+    T = init_T * offset_T;
 }
 
 void Lego::assemble_pose_from_top(const int& press_x, const int& press_y, const int& press_z, const int& press_ori, const int& press_side, Eigen::Matrix4d& T)
@@ -842,30 +845,59 @@ void Lego::assemble_pose_from_top(const int& press_x, const int& press_y, const 
     Eigen::Matrix4d brick_pose_mtx = Eigen::Matrix4d::Identity(4, 4);
     Eigen::Matrix4d grab_offset_mtx = Eigen::Matrix4d::Identity(4, 4);
     Eigen::Matrix4d grab_pose_mtx = Eigen::Matrix4d::Identity(4, 4);
+    int side;
 
+    if(press_ori == 0){
+        if(press_side == 1){
+            side = 1;
+        }
+        else if(press_side == 2){
+            side = 1;
+        }
+        else if(press_side == 3){
+            side = 4;
+        }
+        else if(press_side == 4){
+            side = 4;
+        }
+    }
+    else if(press_ori == 1){
+        if(press_side == 1){
+            side = 1;
+        }
+        else if(press_side == 2){
+            side = 4;
+        }
+        else if(press_side == 3){
+            side = 1;
+        }
+        else if(press_side == 4){
+            side = 4;
+        }
+    }
     calc_brick_loc(l_brick, assemble_plate_, press_ori, press_x, press_y, press_z-1, brick_pose_mtx);
     brick_pose_mtx = brick_pose_mtx * y_180;
     int brick_height = 1;
     int brick_width = 2;
-    if(press_side == 1)
+    if(side == 1)
     {
         grab_offset_mtx(0, 3) = (brick_height * P_len_ - brick_len_offset_) / 2.0;
         grab_offset_mtx(1, 3) = 0;  
         grab_offset_mtx = grab_offset_mtx * z_180;
     }
-    else if(press_side == 2)
+    else if(side == 2)
     {
         grab_offset_mtx(0, 3) = 0;
         grab_offset_mtx(1, 3) = (brick_width * P_len_ - brick_len_offset_) / 2.0;
         grab_offset_mtx = grab_offset_mtx * z_180 * z_90;
     }
-    else if(press_side == 3)
+    else if(side == 3)
     {
         grab_offset_mtx(0, 3) = 0;
         grab_offset_mtx(1, 3) = -(brick_width * P_len_ - brick_len_offset_) / 2.0;
         grab_offset_mtx = grab_offset_mtx * z_90;
     }
-    else
+    else if(side == 4)
     {
         grab_offset_mtx(0, 3) = -(brick_height * P_len_ - brick_len_offset_) / 2.0;
         grab_offset_mtx(1, 3) = 0;
@@ -946,6 +978,11 @@ math::VectorJd Lego::IK(const math::VectorJd& cur_q, const Eigen::Matrix4d& goal
     th1_candidate_cnt = 0;
     all_candidate_cnt = 0;
     th23_candidates.resize(8, 2);
+
+    if(cond1 < 0 && abs(cond1) < 0.0001)
+    {
+        cond1 = 0;
+    }
     if(cond1 >= 0)
     {
         f1 = (-2 * l + sqrt(cond1)) / (8 * a22 + eps);
@@ -1065,8 +1102,8 @@ math::VectorJd Lego::IK(const math::VectorJd& cur_q, const Eigen::Matrix4d& goal
     }
     else
     {
+        std::cout<<"IK failed condition 1"<<std::endl;
         status = false;
-        std::cout<<"Return 1"<<std::endl;
         return cur_q;
     }
     
@@ -1121,7 +1158,7 @@ math::VectorJd Lego::IK(const math::VectorJd& cur_q, const Eigen::Matrix4d& goal
             th5_tmp = acos(-R36(2, 2));
             double s5 = sin(th5_tmp) + eps;
 
-            if(abs(s5) <= 0.000001)
+            if(abs(s5) <= 0.001)
             {
                 th4_tmp = 0;
                 th5_tmp = 0;
@@ -1184,18 +1221,24 @@ math::VectorJd Lego::IK(const math::VectorJd& cur_q, const Eigen::Matrix4d& goal
     status = false;
     for(int i=0; i<all_candidate_cnt; i++)
     {   
-        theta_tmp = candidates.row(i);
-        std::cout<<theta_tmp<<std::endl;
-        verify_T = math::FK(theta_tmp, DH, T_base, 1);
-        if(verify_T.isApprox(goal_T, 0.01) && (theta_tmp - cur_theta).norm() < min_diff)// && joint_in_range(theta_tmp, 1))
+        for(int j=-1; j<2; j++)
         {
-            theta = theta_tmp;
-            min_diff = (theta_tmp - cur_theta).norm();
-            status = true;            
+            theta_tmp = candidates.row(i);
+            theta_tmp(5) = theta_tmp(5) + j * 2 * PI;
+            verify_T = math::FK(theta_tmp, DH, T_base, 1);
+            
+            if(verify_T.isApprox(goal_T, 0.1) && verify_T.col(3).isApprox(goal_T.col(3), 0.01) && (theta_tmp - cur_theta).norm() < min_diff && joint_in_range(theta_tmp, 1))
+            {
+                theta = theta_tmp;
+                min_diff = (theta_tmp - cur_theta).norm();
+                status = true;            
+            }
         }
+        
     }
     if(!status)
     {
+        std::cout<<"IK failed! No valid candidate."<<std::endl;
         return cur_q;
     }
 
@@ -1552,7 +1595,7 @@ void Lego::calc_brick_sup_pose(const std::string&name, const Eigen::MatrixXd& ca
             grab_offset_mtx(1, 3) -= 2 * P_len_;
         }
     }
-    grab_offset_mtx(2, 3) = -dz * brick_height_m_ - 0.0078;
+    grab_offset_mtx(2, 3) = -dz * brick_height_m_ - (P_len_ - brick_len_offset_);
 
     sup_pose_mtx = grab_offset_mtx * sup_pose_mtx;
 
@@ -1840,9 +1883,22 @@ void Lego::update(const std::string& brick_name, const Eigen::Matrix4d& T_init)
 }
 
 void Lego::update_bricks(const math::VectorJd& robot_q, const Eigen::MatrixXd& DH, const Eigen::MatrixXd& base_frame, 
-                                const bool& joint_rad, const std::string& brick_name)
+                                const bool& joint_rad, const std::string& brick_name, const int& mode)
 {
     Eigen::Matrix4d T = math::FK(robot_q, DH, base_frame, joint_rad);
+    if(mode == 1)
+    {
+        Eigen::Matrix4d y_p90, z_180;
+        y_p90 << 0, 0, 1, 0,
+                0, 1, 0, 0,
+                -1, 0, 0, 0,
+                0, 0, 0, 1;
+        z_180 << -1, 0, 0, 0,
+                 0, -1, 0, 0,
+                 0, 0, 1, 0,
+                 0, 0, 0, 1;
+        T = T * y_p90 * z_180;
+    }
     std::string closest_brick_name = brick_name;
     update(brick_name, T);
 }

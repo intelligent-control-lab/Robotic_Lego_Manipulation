@@ -1,0 +1,21 @@
+{
+    "1": {
+        "x": 23,
+        "y": 7,
+        "z": 9,
+        "brick_id": 2,
+        "ori": 0,
+        "press_side": 1,
+        "press_offset": 2,
+        "manipulate_type": 1,
+        "press_x": 23,
+        "press_y": 9,
+        "press_z": 8,
+        "press_ori": 0,
+        "support_x": 23,
+        "support_y": 9,
+        "support_z": 11,
+        "support_ori": 0,
+        "brick_seq": 11
+    }
+}
