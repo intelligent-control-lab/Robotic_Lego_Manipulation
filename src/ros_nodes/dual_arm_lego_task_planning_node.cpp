@@ -211,7 +211,7 @@ int main(int argc, char **argv)
         lego_manipulation::math::VectorJd r2_cur_goal = home_q;
         std::string brick_name;
         bool move_on_to_next = use_yk;
-        int bx, by, bz, bid, bseq, bori, press_side, press_offset, manipulate_type, press_x, press_y, press_z, press_ori, support_x, support_y, support_z, support_ori;
+        int bx, by, bz, bid, bseq, bori, press_side, press_offset, manipulate_type, attack_dir, press_x, press_y, press_z, press_ori, support_x, support_y, support_z, support_ori;
 
         // Eigen::MatrixXd record(1000, 28);
         // int record_cnt = 0;
@@ -282,6 +282,7 @@ int main(int argc, char **argv)
                     press_side = node["press_side"].asInt();
                     press_offset = node["press_offset"].asInt();
                     manipulate_type = node["manipulate_type"].asInt();
+                    attack_dir = node["attack_dir"].asInt();
                     press_x = node["press_x"].asInt();
                     press_y = node["press_y"].asInt();
                     press_z = node["press_z"].asInt();
@@ -486,7 +487,7 @@ int main(int argc, char **argv)
                 {
                     lego_ptr->assemble_pose_from_top(press_x, press_y, press_z, press_ori, press_side, cart_T);
                     Eigen::Matrix4d offset_T = Eigen::MatrixXd::Identity(4, 4);
-                    offset_T.col(3) << pick_offset(0), pick_offset(1), pick_offset(2) - abs(pick_offset(2)), 1;
+                    offset_T.col(3) << pick_offset(0), pick_offset(1) * attack_dir, pick_offset(2) - abs(pick_offset(2)), 1;
                     offset_T = cart_T * offset_T;
 
                     if (main_arm == 1) {
@@ -787,7 +788,7 @@ int main(int argc, char **argv)
                     lego_ptr->assemble_pose_from_top(press_x, press_y, press_z+2, press_ori, press_side, cart_T);
                     cart_T = cart_T * y_p90 * z_180;
                     Eigen::Matrix4d pre_T = Eigen::MatrixXd::Identity(4, 4);
-                    pre_T.col(3) << -(pick_offset(5) - abs(pick_offset(5))), -pick_offset(4), pick_offset(3) - 0.05, 1;
+                    pre_T.col(3) << -(pick_offset(5) - abs(pick_offset(5))), attack_dir * (-pick_offset(4)), pick_offset(3) - 0.05, 1;
                     pre_T = cart_T * pre_T;
                     if(main_arm == 1){
                         r1_cur_goal = lego_ptr->IK(r1_cur_goal, pre_T, lego_ptr->robot_DH_tool_alt_r1(), lego_ptr->robot_base_r1(), lego_ptr->robot_base_inv_r1(),
@@ -801,7 +802,7 @@ int main(int argc, char **argv)
                 else if(mode == 30)
                 {
                     Eigen::Matrix4d offset_T = Eigen::MatrixXd::Identity(4, 4);
-                    offset_T.col(3) << -(pick_offset(5) - abs(pick_offset(5))), -pick_offset(4), pick_offset(3), 1;
+                    offset_T.col(3) << -(pick_offset(5) - abs(pick_offset(5))), attack_dir * (-pick_offset(4)), pick_offset(3), 1;
                     offset_T = cart_T * offset_T;
 
                     if(support_ori == 0){
