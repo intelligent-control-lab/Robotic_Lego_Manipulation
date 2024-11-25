@@ -21,13 +21,14 @@ def main():
     time.sleep(1)
     mode = 0
     task_idx = 0
+    gripper_open_deg = 50
     while not rospy.is_shutdown():
         if(fanuc.goal_reached()):
             if(task_idx >= len(goal_list)):
                 break
             if(mode == 0):
                 cur_goal = home_q
-                fanuc.gripper.drive(0, 0, 0, 255)
+                fanuc.gripper.drive(gripper_open_deg, gripper_open_deg, gripper_open_deg, 255)
             elif(mode == 1):
                 pick_pos, pick_rz, gripper_deg = fanuc.find_brick(goal_list[task_idx][0])
                 goal_T = home_T
@@ -39,7 +40,7 @@ def main():
                                              [0, 0, 1, 0],
                                              [0, 0, 0, 1]])
                 cur_goal, status = fanuc.IK(fanuc.robot_state, goal_T)
-                fanuc.gripper.drive(0, 0, 0, 255)
+                fanuc.gripper.drive(gripper_open_deg, gripper_open_deg, gripper_open_deg, 255)
             elif(mode == 2):
                 fanuc.gripper.drive(gripper_deg, gripper_deg, gripper_deg, 255)
                 time.sleep(1.5)
@@ -59,7 +60,7 @@ def main():
                 cur_goal, status = fanuc.IK(fanuc.robot_state, goal_T)
                 fanuc.gripper.drive(gripper_deg, gripper_deg, gripper_deg, 255)
             elif(mode == 5):
-                fanuc.gripper.drive(0, 0, 0, 255)
+                fanuc.gripper.drive(gripper_open_deg, gripper_open_deg, gripper_open_deg, 255)
                 time.sleep(1.5)
                 cur_goal = home_q
             mode += 1

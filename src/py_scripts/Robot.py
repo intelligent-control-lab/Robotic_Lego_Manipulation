@@ -52,8 +52,8 @@ class Robot():
                                                [0, 0, 0, 1]]))
         self.base_inv = np.linalg.inv(self.base)
         self.theta_max = np.matrix([[-120, 120],
-                                    [-120, 90],
-                                    [-90, 90],
+                                    [-120, 120],
+                                    [-120, 120],
                                     [-180, 180],
                                     [-120, 120],
                                     [-360, 360]], dtype=np.float32)
@@ -176,9 +176,14 @@ class Robot():
         cond1 = 4 * l2 + 16 * a22 * h
         th23_candidate_cnt, th1_candidate_cnt, all_candidate_cnt = 0, 0, 0
         th23_candidates = np.zeros((8, 2))
+
+        if(cond1 < 0 and abs(cond1) < 0.0001):
+            cond1 = abs(cond1)
         if(cond1 >= 0):
             f1 = (-2 * l + np.sqrt(cond1)) / (8 * a22 + eps)
             cond2 = d42 + a32 - f1**2
+            if(cond2 < 0 and abs(cond2) < 0.0001):
+                cond2 = abs(cond2)
             if(cond2 >= 0):
                 # First candidate
                 th3_tmp = 2 * np.arctan((-d4 + np.sqrt(cond2)) / (a3 + f1 + eps))
@@ -225,6 +230,8 @@ class Robot():
                     
             f1 = (-2 * l - np.sqrt(cond1)) / (8 * a22 + eps)
             cond2 = d42 + a32 - f1**2
+            if(cond2 < 0 and abs(cond2) < 0.0001):
+                cond2 = abs(cond2)
             if(cond2 >= 0):
                 # Third candidate
                 th3_tmp = 2 * np.arctan((-d4 + np.sqrt(cond2)) / (a3 + f1 + eps))
