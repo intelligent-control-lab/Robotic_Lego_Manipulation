@@ -53,7 +53,7 @@ class Lego
         gazebo_msgs::SetModelState setmodelstate_;
         double brick_height_m_ = 0.0096;
         double lever_wall_height_ = 0.0032;
-        double brick_len_offset_ = 0.0002;
+        double brick_len_offset_ = 0.0000;
         double P_len_ = 0.008;
         double EPS_ = 0.00001;
         double knob_height_ = 0.0017;

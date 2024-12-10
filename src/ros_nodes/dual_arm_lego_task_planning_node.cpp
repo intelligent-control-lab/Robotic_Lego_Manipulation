@@ -236,7 +236,7 @@ int main(int argc, char **argv)
                     lego_ptr->update_bricks(robot2_q, lego_ptr->robot_DH_tool_r2(), lego_ptr->robot_base_r2(), false, brick_name, 0);
                 }
             }
-            else if (mode >= 22 && mode <= 32)
+            else if (mode >= 25 && mode <= 32)
             {
                 if (main_arm == 1) {
                     lego_ptr->update_bricks(robot1_q, lego_ptr->robot_DH_tool_alt_r1(), lego_ptr->robot_base_r1(), false, brick_name, 1);
