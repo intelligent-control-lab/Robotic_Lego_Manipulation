@@ -342,7 +342,7 @@ Eigen::Matrix4d FK(const VectorJd& q, const Eigen::MatrixXd& DH, const Eigen::Ma
     Eigen::Matrix3d R;
     Eigen::MatrixXd T(3, 1);
     Eigen::Matrix4d trans_mtx = Eigen::Matrix4d::Identity();
-    trans_mtx.col(3) << base_frame, 1;
+    trans_mtx = base_frame;
     Eigen::Matrix4d tmp;
     Eigen::MatrixXd DH_cur = DH;
     VectorJd q_rad = q;
@@ -380,8 +380,7 @@ Eigen::MatrixXd Jacobian_full(const VectorJd& q_deg, const Eigen::MatrixXd& DH, 
     Eigen::Matrix<double, 3, Eigen::Dynamic> z = Eigen::MatrixXd::Zero(3, njoints);
     Eigen::Matrix<double, 3, Eigen::Dynamic> r = Eigen::MatrixXd::Zero(3, njoints);
     Eigen::MatrixXd J(6, njoints);
-    Eigen::MatrixXd T = Eigen::MatrixXd::Identity(4, 4);
-    T.col(3) << base_frame, 1;
+    Eigen::MatrixXd T = base_frame;
 
     if(!joint_rad)
     {
@@ -647,7 +646,7 @@ VectorJd IK(const VectorJd& q, const Eigen::Matrix<double, 3, 1>& cart_goal, con
     Eigen::Quaterniond quat_e(rot_goal);
     
     Vector6d eps;
-    eps << 0.0001, 0.0001, 0.0001, 0.00001, 0.00001, 0.00001;
+    eps << 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001;
     Eigen::MatrixXd J, J_inv, d_th;
     Vector6d error = get_6d_error(pos_s, quat_s, pos_e, quat_e);
     uint iter_num = 0;
