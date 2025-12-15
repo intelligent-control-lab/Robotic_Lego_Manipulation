@@ -1,88 +1,101 @@
-import numpy as np
-import open3d as o3d
-import copy
+from utils import *
 
 class Robot():
-    def __init__(self):
-        cam_mount_thickness = 0.00254
-        self.DH = np.matrix([[0, 0, 0, -np.pi/2],
-                             [-np.pi/2, 0, 0.26, np.pi],
-                             [0, 0, 0.015, -np.pi/2],
-                             [0, -0.29, 0, np.pi/2],
-                             [0, 0, 0, -np.pi/2],
-                             [0, -0.072, 0, np.pi]]) 
-        
-        self.DH_tool = np.matrix([[0, 0, 0, -np.pi/2],
-                             [-np.pi/2, 0, 0.26, np.pi],
-                             [0, 0, 0.015, -np.pi/2],
-                             [0, -0.29, 0, np.pi/2],
-                             [0, 0, 0, -np.pi/2],
-                             [0, -0.183-cam_mount_thickness, 0, np.pi]])
-        self.DH_tool_assemble = np.matrix([[0, 0, 0, -np.pi/2],
-                             [-np.pi/2, 0, 0.26, np.pi],
-                             [0, 0, 0.015, -np.pi/2],
-                             [0, -0.29, 0, np.pi/2],
-                             [0, 0, 0, -np.pi/2],
-                             [0, -0.183-cam_mount_thickness, 0.0078, np.pi]])
-        
-        self.DH_tool1 = np.matrix([[0, 0, 0, -np.pi/2],
-                             [-np.pi/2, 0, 0.26, np.pi],
-                             [0, 0, 0.015, -np.pi/2],
-                             [0, -0.29, 0, np.pi/2],
-                             [np.pi/2, 0, 0, -np.pi/2],
-                             [np.pi, 0.0078 + 0.0096, 0.183 + 0.0032 - 0.0078 + cam_mount_thickness,  0]])
-        
-        self.DH_tool1_assemble = np.matrix([[0, 0, 0, -np.pi/2],
-                             [-np.pi/2, 0, 0.26, np.pi],
-                             [0, 0, 0.015, -np.pi/2],
-                             [0, -0.29, 0, np.pi/2],
-                             [np.pi/2, 0, 0, -np.pi/2],
-                             [np.pi, 0.0078, 0.183 + 0.0032 - 0.0078 + cam_mount_thickness,  0]])
-        
-        print(self.DH_tool1)
-        print(self.DH_tool1_assemble)
-        
-        self.base_trans = np.matrix([[1, 0, 0, 0],
-                                     [0, 1, 0, 0],
-                                     [0, 0, 1, 0.33],
-                                     [0, 0, 0, 1]])
+    def __init__(self, config_fname):
+        config = load_json(config_fname)
+        self.robot_model = pin.buildModelFromUrdf(config["Robot_URDF_fname"])
+        self.waypoint_travel_time = config["Waypoint_Travel_Time"]
+        travel_time_topic = config["Travel_Time_Topic"]
+        robot_goal_topic = config["Robot_Goal_Topic"]
+        robot_state_topic = config["Robot_State_Topic"]
+        self.robot_dof = self.robot_model.nq
 
-    def FK_deg(self, q, DH):
-        q_rad = np.asarray(q, dtype=np.float32)
-        for i in range(q_rad.shape[0]):
-            q_rad[i] = q_rad[i] / 180 * np.pi
-        return self.FK(q_rad, DH)
-    
-    def FK(self, q, DH): # q in radian
-        q_rad = np.asarray(q, dtype=np.float32)
-        trans_mtx = np.copy(self.base_trans)
+        # Create the service client
+        self.robot_goal_pub = rospy.Publisher(robot_goal_topic, Float32MultiArray, queue_size=self.robot_dof)
+        self.travel_time_pub = rospy.Publisher(travel_time_topic, Float64, queue_size=1)
+        rospy.Subscriber(robot_state_topic, Float32MultiArray, self.robot_state_callback)
+        rospy.init_node('robot_py', anonymous=True)
+        self.ros_hz = 1000
+        self.robot_state = None
 
-        DH[:, 0] = DH[:, 0] + q_rad
-        for i in range(DH.shape[0]):
-            tmp = np.matrix([[np.cos(DH[i, 0]), -np.sin(DH[i, 0]) * np.cos(DH[i, 3]),  np.sin(DH[i, 0]) * np.sin(DH[i, 3]), DH[i, 2] * np.cos(DH[i, 0])],
-                             [np.sin(DH[i, 0]),  np.cos(DH[i, 0]) * np.cos(DH[i, 3]), -np.cos(DH[i, 0]) * np.sin(DH[i, 3]), DH[i, 2] * np.sin(DH[i, 0])],
-                             [0,                 np.sin(DH[i, 3]),                     np.cos(DH[i, 3]),                    DH[i, 1]],
-                             [0,                 0,                                    0,                                   1]])
-            trans_mtx = np.matmul(trans_mtx, tmp)
-        return trans_mtx
+        self.set_travel_time(self.waypoint_travel_time)
+
+    def robot_state_callback(self, data):
+        self.robot_state = data.data
+
+    def FK(self, q, ee_name):
+        data = self.robot_model.createData()
+        pin.forwardKinematics(self.robot_model, data, q)
+        pin.updateFramePlacements(self.robot_model, data)
+        ee_id = self.robot_model.getFrameId(ee_name)
+        T = np.eye(4)
+        T[:3, :3] = data.oMf[ee_id].rotation
+        T[:3, 3] = data.oMf[ee_id].translation
+        return T
     
+    def IK(self, cart_pt, q_init, ee_name, planning_joint_list, step_size=0.1, TOL = 1e-3, MAX_ITERS=10000, deg=True):
+        data = self.robot_model.createData()
+        ee_id = self.robot_model.getFrameId(ee_name)
+        target_pose = pin.SE3(cart_pt[:3, :3], cart_pt[:3, 3])
+        status = False
+        q = np.copy(q_init)
+        
+        unlock_joint_ids = []
+        for joint_name in planning_joint_list:
+            joint_id = self.robot_model.getJointId(joint_name)
+            idx_q = self.robot_model.joints[joint_id].idx_q
+            unlock_joint_ids.append(idx_q)
+        locked_joint_ids = np.setdiff1d(np.arange(q.shape[0]), unlock_joint_ids)
+
+        for _ in range(MAX_ITERS):
+            pin.forwardKinematics(self.robot_model, data, q)
+            pin.updateFramePlacements(self.robot_model, data)
+            current_pose = data.oMf[ee_id]
+            err = pin.log6(current_pose.inverse() * target_pose).vector
+            if np.linalg.norm(err) < TOL:
+                status = True
+                break
+            J = pin.computeFrameJacobian(self.robot_model, data, q, ee_id, pin.LOCAL)
+            J[:, locked_joint_ids] = 0
+            dq = step_size * np.linalg.pinv(J) @ err
+            q = pin.integrate(self.robot_model, q, dq)
+        else:
+            q = np.copy(q_init)
+        if(deg):
+            q = q / np.pi * 180
+        return q, status
+    
+    def drive_robot(self, q_goal):
+        msg = Float32MultiArray()
+        msg.data = q_goal.tolist()
+        robot_state = self.robot_state
+
+        rate = rospy.Rate(self.ros_hz)
+        for _ in range(self.ros_hz):
+            self.robot_goal_pub.publish(msg)
+            if(self.robot_state != robot_state):
+                break
+            rate.sleep()
+
+    def set_travel_time(self, travel_time):
+        self.waypoint_travel_time = travel_time
+        msg = Float64()
+        msg.data = travel_time
+        rate = rospy.Rate(self.ros_hz)
+        for _ in range(int(self.ros_hz * 0.3)):
+            self.travel_time_pub.publish(msg)
+            rate.sleep()
+
 if __name__ == "__main__":
-    robot = Robot()
-    q = np.array([0, 0, 0, 0, 0, 0]).reshape((6, 1))
+    robot = Robot("./config/user_config_sim.json")
+    q = np.zeros(15)
 
-    base_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.5)
-    ee_trans = robot.FK_deg(q, robot.DH)
-    ee_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.05).transform(ee_trans)
+    print(robot.FK(q, "left_arm_eoat"))
+    q_sol, status = robot.IK(np.array([[1, 0, 0, 0.1],
+                    [0, 1, 0, 0.33],
+                    [0, 0, 1, 1.3],
+                    [0, 0, 0, 1]]), q, "left_arm_eoat", 
+                    ["left_arm_joint1", "left_arm_joint2", "left_arm_joint3", "left_arm_joint4", "left_arm_joint5", "left_arm_joint6"])
+    print(q_sol, status)
 
-    tool_trans = robot.FK_deg(q, robot.DH_tool)
-    tool_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.05).transform(tool_trans)
-
-    tool_assemble_trans = robot.FK_deg(q, robot.DH_tool_assemble)
-    tool_assemble_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.05).transform(tool_assemble_trans)
-
-    tool1_assemble_trans = robot.FK_deg(q, robot.DH_tool1_assemble)
-    tool1_assemble_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.05).transform(tool1_assemble_trans)
-
-    tool_1_trans = robot.FK_deg(q, robot.DH_tool1)
-    tool_1_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.05).transform(tool_1_trans)
-    o3d.visualization.draw_geometries([base_frame, ee_frame, tool_frame, tool_assemble_frame, tool_1_frame, tool1_assemble_frame])
+    robot.drive_robot(q_sol)
