@@ -1,3 +1,6 @@
 [submodule "FoundationPose"]
 	path = FoundationPose
-	url = https://github.com/NVlabs/FoundationPose.git
+	url = https://github.com/waynekyrie/FoundationPose.git
+[submodule "pytorch3d"]
+	path = pytorch3d
+	url = https://github.com/waynekyrie/pytorch3d.git
