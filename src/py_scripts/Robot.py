@@ -8,17 +8,74 @@ class Robot():
         travel_time_topic = config["Travel_Time_Topic"]
         robot_goal_topic = config["Robot_Goal_Topic"]
         robot_state_topic = config["Robot_State_Topic"]
+        head_color_topic = config["Head_Color_Topic"]
+        head_depth_topic = config["Head_Depth_Topic"]
+        right_color_topic = config["Right_Color_Topic"]
+        right_depth_topic = config["Right_Depth_Topic"]
+        left_color_topic = config["Left_Color_Topic"]
+        left_depth_topic = config["Left_Depth_Topic"]
+        self.data_dir = config["Data_dir"]
         self.robot_dof = self.robot_model.nq
 
         # Create the service client
         self.robot_goal_pub = rospy.Publisher(robot_goal_topic, Float32MultiArray, queue_size=self.robot_dof)
         self.travel_time_pub = rospy.Publisher(travel_time_topic, Float64, queue_size=1)
         rospy.Subscriber(robot_state_topic, Float32MultiArray, self.robot_state_callback)
+        rospy.Subscriber(head_color_topic, Image, self.head_color_callback, queue_size=1)
+        rospy.Subscriber(head_depth_topic, Image, self.head_depth_callback, queue_size=1)
+        rospy.Subscriber(right_color_topic, Image, self.right_color_callback, queue_size=1)
+        rospy.Subscriber(right_depth_topic, Image, self.right_depth_callback, queue_size=1)
+        rospy.Subscriber(left_color_topic, Image, self.left_color_callback, queue_size=1)
+        rospy.Subscriber(left_depth_topic, Image, self.left_depth_callback, queue_size=1)
+        self.bridge = CvBridge()
+
         rospy.init_node('robot_py', anonymous=True)
         self.ros_hz = 1000
         self.robot_state = None
-
+        self.head_color = None
+        self.head_depth = None
+        self.head_mask = None
+        self.right_color = None
+        self.right_depth = None
+        self.right_mask = None
+        self.left_color = None
+        self.left_depth = None
+        self.left_mask = None
         self.set_travel_time(self.waypoint_travel_time)
+
+    def head_color_callback(self, data):
+        try:
+            self.head_color = self.bridge.imgmsg_to_cv2(data, "bgr8")
+            cv2.imwrite(self.data_dir + "/head_color.png", self.head_color)
+            
+            # Use SAM2 in the future
+            hsv = cv2.cvtColor(self.head_color, cv2.COLOR_BGR2HSV)
+            lower = np.array([35, 40, 40])
+            upper = np.array([85, 255, 255])
+            self.head_mask = cv2.inRange(hsv, lower, upper)
+            cv2.imwrite(self.data_dir + "/head_mask.png", self.head_mask)
+        except Exception as e:
+            print("Head color callback error:", e)
+
+    def head_depth_callback(self, data):
+        try:
+            self.head_depth = self.bridge.imgmsg_to_cv2(data, "32FC1")
+            cv2.imwrite(self.data_dir + "/head_depth.png", self.head_depth)
+            np.save(self.data_dir + "/head_depth.npy", self.head_depth)
+        except Exception as e:
+            print("Head depth callback error:", e)
+
+    def right_color_callback(self, data):
+        self.right_color = self.bridge.imgmsg_to_cv2(data, "bgr8")
+
+    def right_depth_callback(self, data):
+        self.right_depth = self.bridge.imgmsg_to_cv2(data, "32FC1")
+    
+    def left_color_callback(self, data):
+        self.left_color = self.bridge.imgmsg_to_cv2(data, "bgr8")
+
+    def left_depth_callback(self, data):
+        self.left_depth = self.bridge.imgmsg_to_cv2(data, "32FC1")
 
     def robot_state_callback(self, data):
         self.robot_state = data.data
@@ -98,4 +155,4 @@ if __name__ == "__main__":
                     ["left_arm_joint1", "left_arm_joint2", "left_arm_joint3", "left_arm_joint4", "left_arm_joint5", "left_arm_joint6"])
     print(q_sol, status)
 
-    robot.drive_robot(q_sol)
+    # robot.drive_robot(q_sol)

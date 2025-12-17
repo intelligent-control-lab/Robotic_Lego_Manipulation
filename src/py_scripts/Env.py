@@ -43,7 +43,6 @@ class Environment():
         quat = r.as_quat()
         pose = [assemble_setup["x"], assemble_setup["y"], assemble_setup["z"], quat[0], quat[1], quat[2], quat[3]]
         self.set_state("assemble_plate", pose)
-        print(pose)
         self.objects_T["assemble_plate"] = assemble_plate_T
 
         for k in env_setup.keys():
@@ -66,7 +65,7 @@ class Environment():
                 quat = r.as_quat()
                 brick_T[:3, :3] = r.as_matrix()
                 brick_T[:3, 3] = np.array([x, y, z])
-                while(not collision_free_env(k, brick_T, self.objects_T, self.lego_lib, P_len=self.P_len)):
+                while(not collision_free_env(k, brick_T, self.objects_T, self.storage_plate_dim, self.assemble_plate_dim, self.lego_lib, P_len=self.P_len)):
                     x, y = np.random.uniform(self.workspace_range["x_min"], self.workspace_range["x_max"]), np.random.uniform(self.workspace_range["y_min"], self.workspace_range["y_max"])
                     brick_T[:3, 3] = np.array([x, y, z])
                 pose = [x, y, z, quat[0], quat[1], quat[2], quat[3]]

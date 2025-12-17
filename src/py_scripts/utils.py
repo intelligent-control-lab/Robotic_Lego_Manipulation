@@ -2,11 +2,14 @@ import numpy as np
 import json
 import rospy
 from std_msgs.msg import Float32MultiArray, Float64
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
 from gazebo_msgs.srv import SetModelState
 from gazebo_msgs.msg import ModelState
 from scipy.spatial.transform import Rotation as R
 import pinocchio as pin
 import time
+import cv2
 
 def load_json(fname):
     with open(fname, 'r') as file:
@@ -41,14 +44,16 @@ def calc_brick_T(brick_name, x_on_plate, y_on_plate, z_on_plate, ori, plate_T, p
     return brick_pose
 
 
-def collision_free_env(brick_name, brick_T, objects_T, lego_lib, eps=0.02, P_len=0.008):
+def collision_free_env(brick_name, brick_T, objects_T, storage_plate_dim, assemble_plate_dim, lego_lib, eps=0.02, P_len=0.008):
     brick_id = brick_name[1:].split('_')[0]
     brick_h, brick_width = lego_lib[brick_id]["height"], lego_lib[brick_id]["width"]
     brick_radius = 0.5 * np.sqrt((brick_h * P_len)**2 + (brick_width * P_len)**2)
     for k in objects_T.keys():
         other_T = objects_T[k]
-        if("plate" in k):
-            other_radius = 0.5 * np.sqrt((48 * P_len)**2 + (48 * P_len)**2)
+        if("storage_plate" in k):
+            other_radius = 0.5 * np.sqrt((storage_plate_dim[0] * P_len)**2 + (storage_plate_dim[1] * P_len)**2)
+        elif("assemble_plate" in k):
+            other_radius = 0.5 * np.sqrt((assemble_plate_dim[0] * P_len)**2 + (assemble_plate_dim[1] * P_len)**2)
         else:
             other_id = k[1:].split('_')[0]
             other_h, other_width = lego_lib[other_id]["height"], lego_lib[other_id]["width"]
