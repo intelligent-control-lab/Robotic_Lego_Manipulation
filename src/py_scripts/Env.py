@@ -16,6 +16,9 @@ class Environment():
         rospy.wait_for_service('/gazebo/set_model_state')
         self.set_state_client = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
 
+        rospy.wait_for_service("/gazebo/get_model_state")
+        self.get_state_client = rospy.ServiceProxy("/gazebo/get_model_state", GetModelState)
+
         self.init_env(config["Env_Setup_fname"])
 
     
@@ -52,7 +55,7 @@ class Environment():
             brick_T = np.eye(4)
             if(self.storage_on_plate):
                 x_on_plate, y_on_plate, z_on_plate, ori = brick_setup["x"], brick_setup["y"], brick_setup["z"], brick_setup["ori"]
-                brick_T = calc_brick_T(k, x_on_plate, y_on_plate, z_on_plate, ori, storage_plate_T, self.storage_plate_dim, self.lego_lib, P_len=self.P_len, brick_tall=self.brick_tall)
+                brick_T = brick_T_on_plate(k, x_on_plate, y_on_plate, z_on_plate, ori, storage_plate_T, self.storage_plate_dim, self.lego_lib, P_len=self.P_len, brick_tall=self.brick_tall)
                 r = R.from_matrix(brick_T[:3, :3])
                 quat = r.as_quat()
                 pose = [brick_T[0, 3], brick_T[1, 3], brick_T[2, 3], quat[0], quat[1], quat[2], quat[3]]
@@ -84,6 +87,18 @@ class Environment():
         state_msg.pose.orientation.w = pose[6]
         ret = self.set_state_client(state_msg)
         return ret
+    
+    def get_state(self, name, relative_to=""):
+        resp = self.get_state_client(model_name=name, relative_entity_name=relative_to)
+        pose = np.eye(4)
+        if resp.success:
+            p = resp.pose
+            pose[:3, 3] = np.array([p.position.x, p.position.y, p.position.z])
+            r = R.from_quat([p.orientation.x, p.orientation.y, p.orientation.z, p.orientation.w])
+            pose[:3, :3] = r.as_matrix()
+        else:
+            print("Failed:", resp.status_message)
+        return pose
 
 if __name__ == "__main__":
     env = Environment("./config/user_config_sim.json")
